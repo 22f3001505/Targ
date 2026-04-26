@@ -7,6 +7,7 @@ import requests
 from pathlib import Path
 from api import APIClient, BASE_URL
 from ui.polish import inject_ui_polish
+from ui.safe import escape_html
 from ui.ux import handle_auth_expired, require_login
 
 # ═══════════════════════════════════════════════════════════════
@@ -355,6 +356,7 @@ if st.session_state.search_mode == "nutrition":
                         
                         for idx, recipe in enumerate(results):
                             r_name = recipe.get('Name', 'Recipe')
+                            r_name_html = escape_html(r_name, 120)
                             r_cal = int(recipe.get('Calories', 0))
                             r_pro = int(recipe.get('ProteinContent', 0))
                             r_carb = int(recipe.get('CarbohydrateContent', 0))
@@ -362,7 +364,7 @@ if st.session_state.search_mode == "nutrition":
                             
                             st.markdown(f"""
                             <div class="recipe-card">
-                                <div class="recipe-name">🍽️ {r_name}</div>
+                                <div class="recipe-name">🍽️ {r_name_html}</div>
                                 <div class="recipe-nutrients">
                                     <span class="nutrient-badge calories">🔥 {r_cal} kcal</span>
                                     <span class="nutrient-badge">💪 {r_pro}g protein</span>
@@ -427,11 +429,13 @@ else:
                 if result["success"]:
                     results = result["data"].get("output", [])
                     if results:
+                        ingredients_title = escape_html(", ".join(ingredients_list), 180)
                         st.markdown('<div class="card">', unsafe_allow_html=True)
-                        st.markdown(f'<div class="card-title">✅ {len(results)} ML-Matched Recipes for: {", ".join(ingredients_list)}</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="card-title">✅ {len(results)} ML-Matched Recipes for: {ingredients_title}</div>', unsafe_allow_html=True)
                         
                         for idx, recipe in enumerate(results):
                             name = recipe.get("Name", "Recipe")
+                            name_html = escape_html(name, 120)
                             cal = int(recipe.get("Calories", 0))
                             pro = round(recipe.get("ProteinContent", 0), 1)
                             carb = round(recipe.get("CarbohydrateContent", 0), 1)
@@ -439,7 +443,7 @@ else:
                             
                             st.markdown(f"""
                             <div class="recipe-card">
-                                <div class="recipe-name">🍽️ {name}</div>
+                                <div class="recipe-name">🍽️ {name_html}</div>
                                 <div class="recipe-nutrients">
                                     <span class="nutrient-badge calories">🔥 {cal} kcal</span>
                                     <span class="nutrient-badge">💪 {pro}g protein</span>

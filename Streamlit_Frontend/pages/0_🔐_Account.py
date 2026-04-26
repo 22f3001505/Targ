@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 from pathlib import Path
 from api import APIClient
 from ui.polish import inject_ui_polish
+from ui.safe import escape_html
 from ui.ux import clear_user_session, consume_auth_redirect, handle_auth_expired, render_auth_redirect_notice
 
 # ═══════════════════════════════════════════════════════════════
@@ -147,11 +148,12 @@ st.markdown("""
 if st.session_state.auth_token:
     user = st.session_state.user_data
     pending_target = st.session_state.get("auth_redirect_target")
+    display_name = escape_html(user.get('full_name') or user.get('username') or 'User', 120)
     
     st.markdown(f"""
     <div class="success-banner">
         <div style="font-size: 2rem;">✅</div>
-        <div style="font-size: 1.3rem; font-weight: 700; margin-top: 8px;">Welcome, {user.get('full_name', user.get('username', ''))}!</div>
+        <div style="font-size: 1.3rem; font-weight: 700; margin-top: 8px;">Welcome, {display_name}!</div>
         <div style="margin-top: 6px; opacity: 0.9;">Your data is being saved automatically.</div>
     </div>
     """, unsafe_allow_html=True)
@@ -260,18 +262,18 @@ if st.session_state.auth_token:
     handle_auth_expired(saved)
     if saved["success"] and saved["data"]:
         for idx, meal in enumerate(saved["data"]):
-            m_name = meal.get('meal_name', 'Recipe')
+            m_name = escape_html(meal.get('meal_name', 'Recipe'), 50)
             m_cal = int(meal.get('calories', 0))
             m_pro = round(meal.get('protein', 0), 1)
             m_carb = round(meal.get('carbs', 0), 1)
             m_fat = round(meal.get('fat', 0), 1)
-            m_date = str(meal.get('saved_at') or meal.get('created_at', ''))[:10]
+            m_date = escape_html(str(meal.get('saved_at') or meal.get('created_at', ''))[:10])
             
             st.markdown(f"""
             <div style="background: #FFFFFF; border: 1px solid rgba(76,175,80,0.15); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #4CAF50;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <strong style="color: #2E7D32 !important; font-size: 1.05rem;">⭐ {m_name[:50]}</strong><br>
+                        <strong style="color: #2E7D32 !important; font-size: 1.05rem;">⭐ {m_name}</strong><br>
                         <span style="color: #666;">🔥 {m_cal} kcal · 💪 {m_pro}g protein · 🌾 {m_carb}g carbs · 🥑 {m_fat}g fat</span>
                     </div>
                     <span style="color: #999; font-size: 0.8rem;">{m_date}</span>
@@ -291,10 +293,11 @@ if st.session_state.auth_token:
     handle_auth_expired(workouts)
     if workouts["success"] and workouts["data"]:
         for log in workouts["data"]:
-            log_date = str(log.get('logged_at', ''))[:10]
+            log_focus = escape_html(log.get('workout_focus', ''), 80)
+            log_date = escape_html(str(log.get('logged_at', ''))[:10])
             st.markdown(f"""
             <div style="background: #F8FFF8; border-radius: 10px; padding: 14px; margin-bottom: 8px; border-left: 3px solid #4CAF50;">
-                <strong style="color: #2E7D32 !important;">{log.get('workout_focus', '')}</strong>
+                <strong style="color: #2E7D32 !important;">{log_focus}</strong>
                 <span style="color: #666; float: right;">{log_date}</span><br>
                 <span style="color: #666;">⏱ {log.get('duration_minutes', 0)} min · 🔥 {log.get('calories_burned', 0)} kcal</span>
             </div>

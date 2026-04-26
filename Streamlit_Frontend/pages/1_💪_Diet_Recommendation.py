@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from api import APIClient, BASE_URL
 from ui.polish import inject_ui_polish
+from ui.safe import escape_html
 from ui.ux import handle_auth_expired, require_login
 
 # ═══════════════════════════════════════════════════════════════
@@ -455,6 +456,7 @@ with results_col:
                     recipes_fetched = True
                     for idx, recipe in enumerate(ml_recipes):
                         name = recipe.get("Name", "Recipe")
+                        name_html = escape_html(name, 120)
                         cal = int(recipe.get("Calories", 0))
                         pro = round(recipe.get("ProteinContent", 0), 1)
                         carb = round(recipe.get("CarbohydrateContent", 0), 1)
@@ -464,7 +466,7 @@ with results_col:
                         
                         st.markdown(f"""
                         <div class="recipe-card">
-                            <div class="recipe-name">🍽️ {name}</div>
+                            <div class="recipe-name">🍽️ {name_html}</div>
                             <div class="recipe-nutrients">
                                 <span class="nutrient-item">🔥 {cal} kcal</span>
                                 <span class="nutrient-item">💪 {pro}g protein</span>

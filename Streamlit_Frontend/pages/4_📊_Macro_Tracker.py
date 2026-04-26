@@ -10,6 +10,7 @@ from pathlib import Path
 from datetime import datetime
 from api import APIClient, BASE_URL
 from ui.polish import inject_ui_polish
+from ui.safe import escape_html
 from ui.ux import handle_auth_expired, require_login
 
 # ═══════════════════════════════════════════════════════════════
@@ -507,11 +508,13 @@ with right_col:
     
     if st.session_state.meals_logged:
         for meal in st.session_state.meals_logged:
+            meal_name_html = escape_html(meal["name"], 80)
+            meal_time_html = escape_html(meal["time"], 8)
             st.markdown(f"""
             <div class="meal-item">
                 <div>
-                    <span class="meal-name">{meal["name"]}</span>
-                    <span style="color: #999; font-size: 0.85rem; margin-left: 10px;">{meal["time"]}</span>
+                    <span class="meal-name">{meal_name_html}</span>
+                    <span style="color: #999; font-size: 0.85rem; margin-left: 10px;">{meal_time_html}</span>
                 </div>
                 <div class="meal-macros">
                     <span class="macro-tag">🔥 {meal["calories"]} kcal</span>
@@ -594,7 +597,8 @@ with search_col:
             foods = result["data"]["foods"]
             st.caption(f"Found {result['data'].get('total', len(foods))} results")
             for i, food in enumerate(foods):
-                with st.expander(f"🍽️ {food['name']}", expanded=(i == 0)):
+                food_name = str(food["name"])
+                with st.expander(f"🍽️ {food_name}", expanded=(i == 0)):
                     st.markdown(f"""
                     - **Calories**: {food['calories']} kcal
                     - **Protein**: {food['protein']}g
@@ -620,7 +624,7 @@ with search_col:
                         if auth_token:
                             save_result = APIClient.save_meal(food["name"], food["calories"], food["protein"], food["carbs"], food["fat"], "tracked", auth_token)
                             handle_auth_expired(save_result)
-                        st.success(f"✅ Added {food['name']}")
+                        st.success(f"✅ Added {food_name}")
                         st.rerun()
         elif food_query:
             st.info("No foods found. Try a different search term.")
