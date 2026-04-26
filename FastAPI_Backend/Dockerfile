@@ -5,7 +5,7 @@ FROM python:3.10.8-slim
 RUN mkdir -p app/backend
 
 COPY FastAPI_Backend/requirements.txt app/backend/requirements.txt
-COPY Data app/Data
+COPY Data/dataset_lite.csv app/Data/dataset_lite.csv
 
 COPY FastAPI_Backend app/backend
 

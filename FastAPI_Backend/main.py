@@ -36,28 +36,33 @@ from exercises_db import (
 # DATASET (memory-optimized for Render free tier 512MB)
 # ═══════════════════════════════════════════════════
 APP_VERSION = "7.1.0"
-DATASET_PATH = Path(__file__).resolve().parent.parent / "Data" / "dataset.csv"
+DATASET_DIR = Path(__file__).resolve().parent.parent / "Data"
+DATASET_LITE = DATASET_DIR / "dataset_lite.csv"
+DATASET_FULL = DATASET_DIR / "dataset.csv"
 
 def _load_dataset() -> pd.DataFrame:
-    """Load dataset with memory optimization for 512MB environments."""
-    NEEDED_COLS = [
-        "Name", "CookTime", "PrepTime", "TotalTime",
-        "RecipeIngredientParts",
-        "Calories", "FatContent", "SaturatedFatContent",
-        "CholesterolContent", "SodiumContent", "CarbohydrateContent",
-        "FiberContent", "SugarContent", "ProteinContent",
-        "RecipeInstructions"
-    ]
-    print("📊 Loading dataset (memory-optimized)...")
-    full = pd.read_csv(DATASET_PATH, compression='gzip', usecols=NEEDED_COLS)
-    # Sample 50K rows to stay within RAM limits
-    sample_size = min(50_000, len(full))
-    df = full.sample(n=sample_size, random_state=42).reset_index(drop=True)
-    del full  # Free the big one immediately
-    # Downcast floats to float32
+    """
+    Load dataset with memory optimization for 512MB environments.
+    Priority: dataset_lite.csv (pre-sampled 50K) > dataset.csv (full 375K, sampled on load)
+    """
     float_cols = ["Calories", "FatContent", "SaturatedFatContent",
                   "CholesterolContent", "SodiumContent", "CarbohydrateContent",
                   "FiberContent", "SugarContent", "ProteinContent"]
+
+    if DATASET_LITE.exists():
+        print("📊 Loading lite dataset (pre-sampled 50K)...")
+        df = pd.read_csv(DATASET_LITE)
+        for col in float_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('float32')
+        print(f"✅ Dataset ready: {len(df)} recipes ({df.memory_usage(deep=True).sum() / 1024 / 1024:.1f} MB)")
+        return df
+
+    # Fallback: load full dataset and sample
+    print("📊 Loading full dataset (sampling 50K)...")
+    full = pd.read_csv(DATASET_FULL, compression='gzip')
+    sample_size = min(50_000, len(full))
+    df = full.sample(n=sample_size, random_state=42).reset_index(drop=True)
+    del full
     for col in float_cols:
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('float32')
     print(f"✅ Dataset ready: {len(df)} recipes ({df.memory_usage(deep=True).sum() / 1024 / 1024:.1f} MB)")
