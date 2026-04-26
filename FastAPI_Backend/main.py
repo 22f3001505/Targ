@@ -33,11 +33,37 @@ from exercises_db import (
 
 
 # ═══════════════════════════════════════════════════
-# DATASET
+# DATASET (memory-optimized for Render free tier 512MB)
 # ═══════════════════════════════════════════════════
-APP_VERSION = "7.0.0"
+APP_VERSION = "7.1.0"
 DATASET_PATH = Path(__file__).resolve().parent.parent / "Data" / "dataset.csv"
-dataset = pd.read_csv(DATASET_PATH, compression='gzip')
+
+def _load_dataset() -> pd.DataFrame:
+    """Load dataset with memory optimization for 512MB environments."""
+    NEEDED_COLS = [
+        "Name", "CookTime", "PrepTime", "TotalTime",
+        "RecipeIngredientParts",
+        "Calories", "FatContent", "SaturatedFatContent",
+        "CholesterolContent", "SodiumContent", "CarbohydrateContent",
+        "FiberContent", "SugarContent", "ProteinContent",
+        "RecipeInstructions"
+    ]
+    print("📊 Loading dataset (memory-optimized)...")
+    full = pd.read_csv(DATASET_PATH, compression='gzip', usecols=NEEDED_COLS)
+    # Sample 50K rows to stay within RAM limits
+    sample_size = min(50_000, len(full))
+    df = full.sample(n=sample_size, random_state=42).reset_index(drop=True)
+    del full  # Free the big one immediately
+    # Downcast floats to float32
+    float_cols = ["Calories", "FatContent", "SaturatedFatContent",
+                  "CholesterolContent", "SodiumContent", "CarbohydrateContent",
+                  "FiberContent", "SugarContent", "ProteinContent"]
+    for col in float_cols:
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('float32')
+    print(f"✅ Dataset ready: {len(df)} recipes ({df.memory_usage(deep=True).sum() / 1024 / 1024:.1f} MB)")
+    return df
+
+dataset = _load_dataset()
 
 
 # ═══════════════════════════════════════════════════
@@ -636,22 +662,19 @@ def get_health_trend(
 
 
 # ═══════════════════════════════════════════════════
-# FOOD NUTRITION DATABASE (v7.0)
+# FOOD NUTRITION DATABASE (v7.1 — memory optimized)
 # ═══════════════════════════════════════════════════
 
-# Build a food lookup index from the recipe dataset (runs once at startup)
 _food_nutrition_db = []
 
 def _build_food_db():
-    """Extract unique food items from recipe dataset for nutrition lookup."""
+    """Build food lookup from already-loaded dataset (no extra sampling needed)."""
     global _food_nutrition_db
     if _food_nutrition_db:
         return
     try:
-        # Sample common foods from the dataset
-        sample = dataset.sample(min(50000, len(dataset)), random_state=42)
         seen = set()
-        for _, row in sample.iterrows():
+        for _, row in dataset.iterrows():
             name = str(row.get("Name", "")).strip()
             if name and name.lower() not in seen and len(name) < 80:
                 seen.add(name.lower())
@@ -664,6 +687,7 @@ def _build_food_db():
                     "fiber": round(float(row.get("FiberContent", 0)), 1),
                     "serving": "1 serving"
                 })
+        print(f"✅ Food DB: {len(_food_nutrition_db)} unique items")
     except Exception as exc:
         print(f"⚠️ Food nutrition index unavailable: {exc}")
 

@@ -5,10 +5,16 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
+# The 9 nutritional feature columns used by the ML model
+NUTRITION_COLS = [
+    "Calories", "FatContent", "SaturatedFatContent",
+    "CholesterolContent", "SodiumContent", "CarbohydrateContent",
+    "FiberContent", "SugarContent", "ProteinContent"
+]
 
 def scaling(dataframe):
     scaler=StandardScaler()
-    prep_data=scaler.fit_transform(dataframe.iloc[:,6:15].to_numpy())
+    prep_data=scaler.fit_transform(dataframe[NUTRITION_COLS].to_numpy())
     return prep_data,scaler
 
 def nn_predictor(prep_data):
