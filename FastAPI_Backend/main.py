@@ -36,10 +36,21 @@ from exercises_db import (
 # ═══════════════════════════════════════════════════
 # DATASET (memory-optimized for Render free tier 512MB)
 # ═══════════════════════════════════════════════════
-APP_VERSION = "7.2.4"
+APP_VERSION = "7.2.5"
 DATASET_DIR = Path(__file__).resolve().parent.parent / "Data"
 DATASET_LITE = DATASET_DIR / "dataset_lite.csv"
 DATASET_FULL = DATASET_DIR / "dataset.csv"
+MEAL_PLAN_DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+MEAL_PLAN_DAY_ALIASES = {
+    "mon": "Monday",
+    "tue": "Tuesday",
+    "wed": "Wednesday",
+    "thu": "Thursday",
+    "fri": "Friday",
+    "sat": "Saturday",
+    "sun": "Sunday",
+}
+MEAL_PLAN_SLOTS = ("breakfast", "lunch", "snack", "dinner")
 
 def _load_dataset() -> pd.DataFrame:
     """
@@ -246,8 +257,54 @@ class LogWorkoutRequest(BaseModel):
         return " ".join(value.strip().split())
 
 class SaveMealPlanRequest(BaseModel):
-    plan_data: dict = Field(..., min_length=1)  # {"Monday": {"breakfast": "...", "lunch": "...", "dinner": "..."}, ...}
+    plan_data: dict = Field(..., min_length=1)  # {"Monday": {"breakfast": "...", "snack": "...", "dinner": "..."}, ...}
     week_start: Optional[str] = Field(None, max_length=20)  # ISO date string
+
+    @field_validator("plan_data")
+    @classmethod
+    def clean_plan_data(cls, value: dict) -> dict:
+        if not isinstance(value, dict):
+            raise ValueError("Meal plan must be an object keyed by day")
+
+        cleaned: dict[str, dict[str, str]] = {}
+        for raw_day, raw_slots in value.items():
+            day_key = str(raw_day).strip()
+            day = MEAL_PLAN_DAY_ALIASES.get(day_key.lower(), day_key)
+            if day not in MEAL_PLAN_DAYS:
+                raise ValueError(f"Day must be one of: {list(MEAL_PLAN_DAYS)}")
+            if not isinstance(raw_slots, dict):
+                raise ValueError(f"{day} must contain meal slots")
+
+            cleaned_slots: dict[str, str] = {}
+            for raw_slot, raw_meal in raw_slots.items():
+                slot = str(raw_slot).strip().lower()
+                if slot not in MEAL_PLAN_SLOTS:
+                    raise ValueError(f"Meal slot must be one of: {list(MEAL_PLAN_SLOTS)}")
+                meal_name = "" if raw_meal is None else " ".join(str(raw_meal).strip().split())
+                if len(meal_name) > 120:
+                    raise ValueError("Meal names must be 120 characters or fewer")
+                cleaned_slots[slot] = meal_name
+
+            if cleaned_slots:
+                cleaned[day] = cleaned_slots
+
+        if not cleaned:
+            raise ValueError("Meal plan must include at least one meal")
+        return cleaned
+
+    @field_validator("week_start")
+    @classmethod
+    def clean_week_start(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            return None
+        try:
+            datetime.strptime(value, "%Y-%m-%d")
+        except ValueError as exc:
+            raise ValueError("week_start must be an ISO date like YYYY-MM-DD") from exc
+        return value
 
 class WaterIntakeRequest(BaseModel):
     glasses: int = Field(0, ge=0, le=40)

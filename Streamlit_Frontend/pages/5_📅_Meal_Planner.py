@@ -6,6 +6,7 @@ import streamlit as st
 import random
 from pathlib import Path
 from api import APIClient, BASE_URL
+from ui.safe import escape_html
 from ui.polish import inject_ui_polish
 from ui.ux import handle_auth_expired, require_login
 
@@ -28,10 +29,11 @@ require_login("pages/5_📅_Meal_Planner.py")
 MEALS = {
     "breakfast": [
         {"name": "Greek Yogurt Parfait", "calories": 350, "ingredients": ["Greek yogurt", "Granola", "Mixed berries", "Honey"]},
-        {"name": "Avocado Toast with Eggs", "calories": 420, "ingredients": ["Whole grain bread", "Avocado", "Eggs", "Cherry tomatoes"]},
+        {"name": "Avocado Toast + Eggs", "calories": 420, "ingredients": ["Whole grain bread", "Avocado", "Eggs", "Cherry tomatoes"]},
         {"name": "Oatmeal Bowl", "calories": 380, "ingredients": ["Oats", "Banana", "Almonds", "Almond milk", "Cinnamon"]},
         {"name": "Smoothie Bowl", "calories": 340, "ingredients": ["Frozen berries", "Banana", "Spinach", "Almond butter", "Chia seeds"]},
         {"name": "Egg White Omelette", "calories": 280, "ingredients": ["Egg whites", "Spinach", "Mushrooms", "Feta cheese"]},
+        {"name": "Protein Pancakes", "calories": 390, "ingredients": ["Protein powder", "Oats", "Eggs", "Banana", "Maple syrup"]},
     ],
     "lunch": [
         {"name": "Grilled Chicken Salad", "calories": 480, "ingredients": ["Chicken breast", "Mixed greens", "Tomatoes", "Cucumber", "Olive oil"]},
@@ -39,17 +41,64 @@ MEALS = {
         {"name": "Turkey Wrap", "calories": 450, "ingredients": ["Whole wheat tortilla", "Turkey breast", "Lettuce", "Tomato", "Hummus"]},
         {"name": "Mediterranean Plate", "calories": 510, "ingredients": ["Falafel", "Hummus", "Tabbouleh", "Pita bread", "Olives"]},
         {"name": "Salmon Poke Bowl", "calories": 540, "ingredients": ["Sushi rice", "Salmon", "Edamame", "Avocado", "Soy sauce"]},
+        {"name": "Paneer Tikka Wrap", "calories": 490, "ingredients": ["Whole wheat tortilla", "Paneer", "Bell peppers", "Greek yogurt", "Mint chutney"]},
+    ],
+    "snack": [
+        {"name": "🍌 Banana + Almonds", "calories": 180, "ingredients": ["Banana", "Almonds"]},
+        {"name": "🥜 Protein Bar", "calories": 220, "ingredients": ["Protein bar"]},
+        {"name": "🍎 Apple + PB", "calories": 250, "ingredients": ["Apple", "Peanut butter"]},
+        {"name": "🥛 Greek Yogurt", "calories": 150, "ingredients": ["Greek yogurt"]},
+        {"name": "None", "calories": 0, "ingredients": []},
     ],
     "dinner": [
         {"name": "Baked Salmon & Veggies", "calories": 550, "ingredients": ["Salmon fillet", "Asparagus", "Broccoli", "Lemon", "Olive oil"]},
-        {"name": "Grilled Chicken Stir Fry", "calories": 480, "ingredients": ["Chicken breast", "Bell peppers", "Broccoli", "Brown rice", "Soy sauce"]},
+        {"name": "Chicken Stir Fry", "calories": 480, "ingredients": ["Chicken breast", "Bell peppers", "Broccoli", "Brown rice", "Soy sauce"]},
         {"name": "Lean Beef Tacos", "calories": 520, "ingredients": ["Ground beef (lean)", "Corn tortillas", "Lettuce", "Salsa", "Greek yogurt"]},
-        {"name": "Vegetable Curry", "calories": 460, "ingredients": ["Mixed vegetables", "Coconut milk", "Curry paste", "Basmati rice", "Cilantro"]},
+        {"name": "Vegetable Curry + Rice", "calories": 460, "ingredients": ["Mixed vegetables", "Coconut milk", "Curry paste", "Basmati rice", "Cilantro"]},
         {"name": "Grilled Tofu Bowl", "calories": 420, "ingredients": ["Firm tofu", "Quinoa", "Roasted vegetables", "Teriyaki sauce"]},
+        {"name": "Dal + Roti + Salad", "calories": 440, "ingredients": ["Dal", "Roti", "Mixed greens", "Cucumber", "Tomatoes"]},
     ]
 }
 
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+MEAL_SLOTS = [
+    ("breakfast", "🌅 Breakfast", "Select breakfast"),
+    ("lunch", "☀️ Lunch", "Select lunch"),
+    ("snack", "🍫 Snack", "Select snack"),
+    ("dinner", "🌙 Dinner", "Select dinner"),
+]
+MEAL_ALIASES = {
+    "breakfast": {
+        "Avocado Toast with Eggs": "Avocado Toast + Eggs",
+    },
+    "snack": {
+        "Banana + Almonds": "🍌 Banana + Almonds",
+        "Protein Bar": "🥜 Protein Bar",
+        "Apple + Peanut Butter": "🍎 Apple + PB",
+        "Greek Yogurt": "🥛 Greek Yogurt",
+    },
+    "dinner": {
+        "Grilled Chicken Stir Fry": "Chicken Stir Fry",
+        "Vegetable Curry": "Vegetable Curry + Rice",
+    },
+}
+
+
+def meal_options(slot: str) -> list[str]:
+    return [meal["name"] for meal in MEALS[slot]]
+
+
+def resolve_meal_name(slot: str, value: object) -> str:
+    options = meal_options(slot)
+    default = "None" if slot == "snack" else options[0]
+    meal_name = "" if value is None else str(value).strip()
+    meal_name = MEAL_ALIASES.get(slot, {}).get(meal_name, meal_name)
+    return meal_name if meal_name in options else default
+
+
+def selected_meal(slot: str, value: object) -> dict:
+    meal_name = resolve_meal_name(slot, value)
+    return next(meal for meal in MEALS[slot] if meal["name"] == meal_name)
 
 # ═══════════════════════════════════════════════════════════════
 # PREMIUM CSS
@@ -329,9 +378,8 @@ with st.sidebar:
     
     if st.button("🎲 Randomize Week", use_container_width=True):
         for day in DAYS:
-            st.session_state[f"{day}_breakfast"] = random.choice([m["name"] for m in MEALS["breakfast"]])
-            st.session_state[f"{day}_lunch"] = random.choice([m["name"] for m in MEALS["lunch"]])
-            st.session_state[f"{day}_dinner"] = random.choice([m["name"] for m in MEALS["dinner"]])
+            for slot, _, _ in MEAL_SLOTS:
+                st.session_state[f"{day}_{slot}"] = random.choice(meal_options(slot))
         st.success("✅ Plan randomized!")
         st.rerun()
 
@@ -350,7 +398,7 @@ st.markdown("""
 # ═══════════════════════════════════════════════════════════════
 day_tabs = st.tabs([f"📆 {day[:3]}" for day in DAYS])
 
-weekly_totals = {"calories": 0, "ingredients": set()}
+weekly_totals = {"calories": 0, "ingredients": set(), "planned_items": 0}
 
 for i, day in enumerate(DAYS):
     with day_tabs[i]:
@@ -362,54 +410,28 @@ for i, day in enumerate(DAYS):
             
             st.markdown(f'<div class="card">', unsafe_allow_html=True)
             
-            # Breakfast
-            st.markdown("#### 🌅 Breakfast")
-            breakfast_options = [m["name"] for m in MEALS["breakfast"]]
-            selected_breakfast = st.selectbox(
-                "Select breakfast",
-                breakfast_options,
-                key=f"{day}_breakfast",
-                label_visibility="collapsed"
-            )
-            breakfast_meal = next(m for m in MEALS["breakfast"] if m["name"] == selected_breakfast)
-            day_cal += breakfast_meal["calories"]
-            weekly_totals["ingredients"].update(breakfast_meal["ingredients"])
-            
-            st.markdown(f"<p style='color: #666;'>🔥 {breakfast_meal['calories']} kcal</p>", unsafe_allow_html=True)
-            
-            st.markdown("---")
-            
-            # Lunch
-            st.markdown("#### ☀️ Lunch")
-            lunch_options = [m["name"] for m in MEALS["lunch"]]
-            selected_lunch = st.selectbox(
-                "Select lunch",
-                lunch_options,
-                key=f"{day}_lunch",
-                label_visibility="collapsed"
-            )
-            lunch_meal = next(m for m in MEALS["lunch"] if m["name"] == selected_lunch)
-            day_cal += lunch_meal["calories"]
-            weekly_totals["ingredients"].update(lunch_meal["ingredients"])
-            
-            st.markdown(f"<p style='color: #666;'>🔥 {lunch_meal['calories']} kcal</p>", unsafe_allow_html=True)
-            
-            st.markdown("---")
-            
-            # Dinner
-            st.markdown("#### 🌙 Dinner")
-            dinner_options = [m["name"] for m in MEALS["dinner"]]
-            selected_dinner = st.selectbox(
-                "Select dinner",
-                dinner_options,
-                key=f"{day}_dinner",
-                label_visibility="collapsed"
-            )
-            dinner_meal = next(m for m in MEALS["dinner"] if m["name"] == selected_dinner)
-            day_cal += dinner_meal["calories"]
-            weekly_totals["ingredients"].update(dinner_meal["ingredients"])
-            
-            st.markdown(f"<p style='color: #666;'>🔥 {dinner_meal['calories']} kcal</p>", unsafe_allow_html=True)
+            day_meals = {}
+            for slot_index, (slot, slot_title, select_label) in enumerate(MEAL_SLOTS):
+                st.markdown(f"#### {slot_title}")
+                state_key = f"{day}_{slot}"
+                st.session_state[state_key] = resolve_meal_name(slot, st.session_state.get(state_key))
+                selected = st.selectbox(
+                    select_label,
+                    meal_options(slot),
+                    key=state_key,
+                    label_visibility="collapsed"
+                )
+                meal = selected_meal(slot, selected)
+                day_meals[slot] = {"label": slot_title, "selected": resolve_meal_name(slot, selected), "meal": meal}
+                day_cal += meal["calories"]
+                if meal["calories"] > 0:
+                    weekly_totals["planned_items"] += 1
+                    weekly_totals["ingredients"].update(meal["ingredients"])
+
+                st.markdown(f"<p style='color: #666;'>🔥 {meal['calories']} kcal</p>", unsafe_allow_html=True)
+
+                if slot_index < len(MEAL_SLOTS) - 1:
+                    st.markdown("---")
             
             st.markdown('</div>', unsafe_allow_html=True)
             
@@ -434,28 +456,22 @@ for i, day in enumerate(DAYS):
             
             st.markdown(f"""
             <div class="day-header">
-                <span class="day-name">{day}</span>
+                <span class="day-name">{escape_html(day)}</span>
                 <span class="day-calories">🔥 {day_cal} kcal {target_badge}</span>
             </div>
             """, unsafe_allow_html=True)
-            
-            st.markdown(f"""
-            <div class="meal-card">
-                <div class="meal-type">🌅 Breakfast</div>
-                <div class="meal-name">{selected_breakfast}</div>
-                <div class="meal-calories">{breakfast_meal['calories']} kcal</div>
-            </div>
-            <div class="meal-card">
-                <div class="meal-type">☀️ Lunch</div>
-                <div class="meal-name">{selected_lunch}</div>
-                <div class="meal-calories">{lunch_meal['calories']} kcal</div>
-            </div>
-            <div class="meal-card">
-                <div class="meal-type">🌙 Dinner</div>
-                <div class="meal-name">{selected_dinner}</div>
-                <div class="meal-calories">{dinner_meal['calories']} kcal</div>
-            </div>
-            """, unsafe_allow_html=True)
+
+            meal_cards = []
+            for slot, _, _ in MEAL_SLOTS:
+                entry = day_meals[slot]
+                meal_cards.append(f"""
+                <div class="meal-card">
+                    <div class="meal-type">{escape_html(entry["label"])}</div>
+                    <div class="meal-name">{escape_html(entry["selected"])}</div>
+                    <div class="meal-calories">{entry["meal"]["calories"]} kcal</div>
+                </div>
+                """)
+            st.markdown("\n".join(meal_cards), unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════
 # WEEKLY SUMMARY & GROCERY LIST
@@ -495,8 +511,8 @@ with summary_col:
             <div class="summary-label">Daily Average</div>
         </div>
         <div class="summary-card">
-            <div class="summary-value">21</div>
-            <div class="summary-label">Meals Planned</div>
+            <div class="summary-value">{weekly_totals["planned_items"]}</div>
+            <div class="summary-label">Meals & Snacks</div>
         </div>
         {target_html}
     </div>
@@ -511,21 +527,29 @@ with grocery_col:
     # Categorize ingredients
     categories = {
         "Proteins": ["Chicken breast", "Salmon fillet", "Turkey breast", "Eggs", "Egg whites", "Ground beef (lean)", "Firm tofu", "Salmon", "Falafel"],
-        "Dairy": ["Greek yogurt", "Feta cheese", "Almond milk", "Coconut milk"],
-        "Grains": ["Oats", "Quinoa", "Brown rice", "Basmati rice", "Sushi rice", "Whole grain bread", "Whole wheat tortilla", "Pita bread", "Corn tortillas", "Granola"],
+        "Dairy": ["Greek yogurt", "Feta cheese", "Almond milk", "Coconut milk", "Paneer"],
+        "Grains": ["Oats", "Quinoa", "Brown rice", "Basmati rice", "Sushi rice", "Whole grain bread", "Whole wheat tortilla", "Pita bread", "Corn tortillas", "Granola", "Roti"],
         "Vegetables": ["Spinach", "Mushrooms", "Mixed greens", "Tomatoes", "Cucumber", "Bell peppers", "Broccoli", "Asparagus", "Roasted vegetables", "Mixed vegetables", "Cherry tomatoes", "Lettuce", "Edamame"],
-        "Fruits": ["Banana", "Mixed berries", "Frozen berries", "Lemon", "Avocado"],
-        "Pantry": ["Olive oil", "Honey", "Almonds", "Almond butter", "Chia seeds", "Tahini", "Hummus", "Cinnamon", "Soy sauce", "Teriyaki sauce", "Salsa", "Curry paste", "Cilantro", "Chickpeas", "Olives", "Tabbouleh"]
+        "Fruits": ["Banana", "Mixed berries", "Frozen berries", "Lemon", "Avocado", "Apple"],
+        "Pantry": ["Olive oil", "Honey", "Almonds", "Almond butter", "Chia seeds", "Tahini", "Hummus", "Cinnamon", "Soy sauce", "Teriyaki sauce", "Salsa", "Curry paste", "Cilantro", "Chickpeas", "Olives", "Tabbouleh", "Protein powder", "Maple syrup", "Protein bar", "Peanut butter", "Mint chutney", "Dal"]
     }
     
     ingredients = weekly_totals["ingredients"]
+    categorized = set()
     
     for category, items in categories.items():
         matching = [item for item in items if item in ingredients]
         if matching:
-            st.markdown(f'<div class="grocery-category">{category}</div>', unsafe_allow_html=True)
+            categorized.update(matching)
+            st.markdown(f'<div class="grocery-category">{escape_html(category)}</div>', unsafe_allow_html=True)
             for item in matching:
-                st.markdown(f'<div class="grocery-item">☐ {item}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="grocery-item">☐ {escape_html(item)}</div>', unsafe_allow_html=True)
+
+    uncategorized = sorted(item for item in ingredients if item not in categorized)
+    if uncategorized:
+        st.markdown('<div class="grocery-category">Other</div>', unsafe_allow_html=True)
+        for item in uncategorized:
+            st.markdown(f'<div class="grocery-item">☐ {escape_html(item)}</div>', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -546,11 +570,9 @@ if auth_token:
         if st.button("💾 Save Plan to Account", use_container_width=True, type="primary"):
             plan_data = {}
             for day in DAYS:
-                plan_data[day] = {
-                    "breakfast": st.session_state.get(f"{day}_breakfast", ""),
-                    "lunch": st.session_state.get(f"{day}_lunch", ""),
-                    "dinner": st.session_state.get(f"{day}_dinner", "")
-                }
+                plan_data[day] = {}
+                for slot, _, _ in MEAL_SLOTS:
+                    plan_data[day][slot] = resolve_meal_name(slot, st.session_state.get(f"{day}_{slot}", ""))
             result = APIClient.save_meal_plan(plan_data, auth_token)
             handle_auth_expired(result)
             if result["success"]:
@@ -566,12 +588,9 @@ if auth_token:
                 plan = result["data"]["plan_data"]
                 for day in DAYS:
                     if day in plan:
-                        if plan[day].get("breakfast"):
-                            st.session_state[f"{day}_breakfast"] = plan[day]["breakfast"]
-                        if plan[day].get("lunch"):
-                            st.session_state[f"{day}_lunch"] = plan[day]["lunch"]
-                        if plan[day].get("dinner"):
-                            st.session_state[f"{day}_dinner"] = plan[day]["dinner"]
+                        for slot, _, _ in MEAL_SLOTS:
+                            if plan[day].get(slot) is not None:
+                                st.session_state[f"{day}_{slot}"] = resolve_meal_name(slot, plan[day][slot])
                 st.success("✅ Plan loaded!")
                 st.rerun()
             else:

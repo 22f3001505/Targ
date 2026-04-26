@@ -185,6 +185,16 @@ def main() -> int:
         assert_status(response)
         assert response.json()["plan_data"] == plan
 
+        response = client.post("/user/meal-plan", headers=headers, json={"plan_data": {"Funday": {"breakfast": "Oats"}}})
+        assert_status(response, 422)
+
+        response = client.post(
+            "/user/meal-plan",
+            headers=headers,
+            json={"plan_data": {"Monday": {"breakfast": "x" * 121}}},
+        )
+        assert_status(response, 422)
+
     print("TARG verification passed")
     return 0
 
