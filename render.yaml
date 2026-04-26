@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: targ-api
+    runtime: docker
+    dockerfilePath: ./FastAPI_Backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: targ-postgres
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: CORS_ALLOW_CREDENTIALS
+        value: "false"
+
+databases:
+  - name: targ-postgres
+    databaseName: targ
+    user: targ
+    plan: free

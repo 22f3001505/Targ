@@ -1,0 +1,38 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.log
+.DS_Store
+
+# Local secrets and scratch files
+.env
+.env.*
+FastAPI_Backend/keys.py
+FastAPI_Backend/data.py
+FastAPI_Backend/test.py
+test.py
+test.ipynb
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Android / Gradle generated output
+targ-android/.gradle/
+targ-android/build/
+targ-android/app/build/
+targ-android/local.properties
+targ-android/.idea/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# HuggingFace data duplicate (use root Data/)
+huggingface/Data/
+
+# IDE
+.idea/
+*.iml

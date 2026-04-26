@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: FastAPI_Backend/Dockerfile
+    image: backend:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - CORS_ORIGINS=http://localhost:8501,http://frontend:8501
+      - CORS_ALLOW_CREDENTIALS=true
+    networks:
+      - project_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Streamlit_Frontend/Dockerfile
+    image: frontend:latest
+    ports:
+      - "8501:8501"
+    environment:
+      - TARG_API_URL=http://backend:8080
+    networks:
+      - project_network
+    depends_on:
+      - backend
+
+networks:
+  project_network:
