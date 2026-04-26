@@ -10,6 +10,8 @@ try:
     from api import APIClient
 except ImportError:
     APIClient = None
+from ui.polish import inject_ui_polish
+from ui.ux import require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -24,8 +26,7 @@ st.set_page_config(
 # Logo path
 LOGO_PATH = Path(__file__).parent / "logo.png"
 
-if not st.session_state.get("auth_token"):
-    st.switch_page("pages/0_🔐_Account.py")
+require_login("Hello.py")
 
 # ═══════════════════════════════════════════════════════════════
 # PREMIUM CSS - HEALTHCARE GRADE DESIGN
@@ -393,6 +394,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+inject_ui_polish()
 
 # ═══════════════════════════════════════════════════════════════
 # SIDEBAR
@@ -451,16 +453,18 @@ st.markdown("""
 
 # Stats row — use real count if API available
 recipe_count = "375K+"
+exercise_count = "198"
 if APIClient:
     hs = APIClient.check_health()
     if hs.get("connected") and hs.get("dataset_size", 0) > 0:
         ds = hs["dataset_size"]
         recipe_count = f"{ds:,}" if ds < 10000 else f"{ds//1000}K+"
+        exercise_count = str(hs.get("exercise_count", 198))
 
 sc1, sc2, sc3, sc4 = st.columns(4)
 sc1.metric("📚 Recipes", recipe_count)
 sc2.metric("🧬 Nutrients", "9")
-sc3.metric("🏋️ Exercises", "248")
+sc3.metric("🏋️ Exercises", exercise_count)
 sc4.metric("💯 Free", "100%")
 
 # ═══════════════════════════════════════════════════════════════
@@ -491,12 +495,12 @@ with col4:
 # ═══════════════════════════════════════════════════════════════
 st.markdown('<div class="section-header"><h2 class="section-title">✨ Why TARG?</h2><p class="section-subtitle">Healthcare-grade recommendations powered by machine learning</p></div>', unsafe_allow_html=True)
 
-st.markdown("""
+st.markdown(f"""
 <div class="feature-grid">
     <div class="feature-card">
         <span class="feature-icon">🧠</span>
         <div class="feature-title">ML-Powered Intelligence</div>
-        <div class="feature-desc">Our KNN algorithm with cosine similarity analyzes 521,937 recipes to find your perfect nutritional match.</div>
+        <div class="feature-desc">Our KNN algorithm with cosine similarity analyzes {recipe_count} recipes to find your closest nutritional match.</div>
     </div>
     <div class="feature-card">
         <span class="feature-icon">📊</span>
@@ -521,7 +525,7 @@ st.markdown("""
 # ═══════════════════════════════════════════════════════════════
 st.markdown('<div class="section-header"><h2 class="section-title">⚡ How It Works</h2><p class="section-subtitle">Simple 4-step process to better health</p></div>', unsafe_allow_html=True)
 
-st.markdown("""
+st.markdown(f"""
 <div class="steps-container">
     <div class="step-item">
         <div class="step-number">1</div>
@@ -536,7 +540,7 @@ st.markdown("""
     <div class="step-item">
         <div class="step-number">3</div>
         <div class="step-title">AI Matching</div>
-        <div class="step-desc">ML finds nutritionally optimal recipes from 521K+ options</div>
+        <div class="step-desc">ML finds nutritionally aligned recipes from {recipe_count} options</div>
     </div>
     <div class="step-item">
         <div class="step-number">4</div>
@@ -566,12 +570,12 @@ st.markdown("""
 # ML EXPLAINER
 # ═══════════════════════════════════════════════════════════════
 with st.expander("🧠 How does the ML algorithm work?", expanded=False):
-    st.markdown("""
+    st.markdown(f"""
     ### Content-Based Filtering with K-Nearest Neighbors
     
     TARG uses a **scientifically-backed approach** to find foods that match your nutritional needs:
     
-    1. **Feature Extraction**: Each of our 521,937 recipes is represented as a 9-dimensional vector:
+    1. **Feature Extraction**: Each active recipe is represented as a 9-dimensional vector:
        - Calories, Protein, Carbs, Fat, Fiber, Saturated Fat, Cholesterol, Sodium, Sugar
     
     2. **Normalization**: We use `StandardScaler` to normalize all features, ensuring no single nutrient dominates the similarity calculation.

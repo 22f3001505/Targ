@@ -19,7 +19,11 @@ import re
 # ═══════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════
-SECRET_KEY = os.getenv("SECRET_KEY", "targ-secret-key-change-in-production-2024")
+DEFAULT_SECRET_KEY = "targ-secret-key-change-in-production-2024"
+SECRET_KEY = os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY)
+if SECRET_KEY == DEFAULT_SECRET_KEY and os.getenv("RENDER"):
+    raise RuntimeError("SECRET_KEY must be set in production")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_.-]{2,31}$")
@@ -105,7 +109,9 @@ def verify_password(plain: str, hashed: str) -> bool:
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc)})
+    if "user_id" in to_encode:
+        to_encode.setdefault("sub", str(to_encode["user_id"]))
+    to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc), "typ": "access"})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -114,6 +120,14 @@ def decode_token(token: str) -> Optional[dict]:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except JWTError:
+        return None
+
+
+def token_user_id(payload: dict) -> Optional[int]:
+    raw_user_id = payload.get("user_id") or payload.get("sub")
+    try:
+        return int(raw_user_id)
+    except (TypeError, ValueError):
         return None
 
 
@@ -135,7 +149,7 @@ def get_current_user(
     if not payload:
         return None
 
-    user_id = payload.get("user_id")
+    user_id = token_user_id(payload)
     if not user_id:
         return None
 
@@ -166,11 +180,22 @@ def require_auth(
             headers={"WWW-Authenticate": "Bearer"}
         )
 
-    user_id = payload.get("user_id")
+    user_id = token_user_id(payload)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token subject",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
     user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User no longer exists",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
 
     return user
 

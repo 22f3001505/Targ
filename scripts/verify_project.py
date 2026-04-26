@@ -38,6 +38,10 @@ def main() -> int:
         assert root["version"].startswith("7.")
         assert root["dataset_size"] > 0
 
+        response = client.get("/ready")
+        assert_status(response)
+        assert response.json()["database"] == "ok"
+
         response = client.post(
             "/health/",
             json={"age": 25, "height": 175, "weight": 70, "gender": "male", "activity_level": "moderate"},
@@ -74,6 +78,23 @@ def main() -> int:
         response = client.post("/auth/refresh", headers=headers)
         assert_status(response)
 
+        response = client.get("/auth/me", headers=headers)
+        assert_status(response)
+        assert response.json()["username"] == "verify"
+
+        response = client.post(
+            "/health/",
+            headers=headers,
+            json={"age": 31, "height": 172, "weight": 74, "gender": "male", "activity_level": "moderate"},
+        )
+        assert_status(response)
+
+        response = client.get("/user/stats", headers=headers)
+        assert_status(response)
+        stats = response.json()
+        assert stats["total_health_analyses"] == 1
+        assert stats["latest_bmi"] is not None
+
         response = client.post(
             "/user/meals",
             headers=headers,
@@ -81,15 +102,56 @@ def main() -> int:
         )
         assert_status(response)
 
+        response = client.get("/user/meals", headers=headers)
+        assert_status(response)
+        assert any(meal["meal_name"] == "Verify Meal" for meal in response.json())
+
+        response = client.get("/user/stats", headers=headers)
+        assert_status(response)
+        assert response.json()["total_saved_meals"] == 1
+
         response = client.delete("/user/meals/clear", headers=headers)
         assert_status(response)
         assert "Cleared" in response.json()["message"]
+
+        response = client.get("/user/meals", headers=headers)
+        assert_status(response)
+        assert response.json() == []
+
+        response = client.post(
+            "/user/workouts",
+            headers=headers,
+            json={
+                "workout_focus": "Verification",
+                "exercises_completed": ["Running"],
+                "duration_minutes": 30,
+                "calories_burned": 260,
+            },
+        )
+        assert_status(response)
+
+        response = client.get("/user/workouts", headers=headers)
+        assert_status(response)
+        assert response.json()[0]["workout_focus"] == "Verification"
+
+        response = client.get("/user/stats", headers=headers)
+        assert_status(response)
+        assert response.json()["total_workouts"] == 1
 
         response = client.post("/user/water", headers=headers, json={"glasses": 2})
         assert_status(response)
         response = client.get("/user/water", headers=headers)
         assert_status(response)
         assert response.json()["glasses"] == 2
+
+        response = client.post("/user/water", headers=headers, json={"glasses": 0, "ml": 0})
+        assert_status(response, 422)
+
+        response = client.post(
+            "/exercises/calories",
+            json={"exercise_name": "Running", "weight_kg": -1, "duration_minutes": 30},
+        )
+        assert_status(response, 422)
 
         plan = {"Monday": {"breakfast": "Oats", "lunch": "Rice", "snack": "Fruit", "dinner": "Dal"}}
         response = client.post("/user/meal-plan", headers=headers, json={"plan_data": plan})

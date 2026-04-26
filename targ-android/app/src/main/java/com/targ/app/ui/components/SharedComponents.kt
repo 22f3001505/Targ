@@ -1,6 +1,7 @@
 package com.targ.app.ui.components
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,17 +33,29 @@ fun PageHeader(title: String, subtitle: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(16.dp, RoundedCornerShape(24.dp))
-            .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(PrimaryGreen, DarkGreen)))
-            .padding(horizontal = 28.dp, vertical = 36.dp),
+            .shadow(6.dp, RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(Brush.linearGradient(listOf(AccentTeal, PrimaryGreen, DarkGreen)))
+            .padding(horizontal = 22.dp, vertical = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = White)
+            Text(
+                title,
+                fontSize = 25.sp,
+                lineHeight = 30.sp,
+                fontWeight = FontWeight.Bold,
+                color = White,
+                textAlign = TextAlign.Center
+            )
             Spacer(Modifier.height(6.dp))
-            Text(subtitle, fontSize = 14.sp, color = White.copy(alpha = 0.85f),
-                textAlign = TextAlign.Center)
+            Text(
+                subtitle,
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                color = White.copy(alpha = 0.86f),
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -59,9 +73,10 @@ fun TargCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CardRadius),
         colors = CardDefaults.cardColors(containerColor = White),
+        border = BorderStroke(1.dp, BorderLight),
         elevation = CardDefaults.cardElevation(defaultElevation = CardElevation)
     ) {
-        Column(modifier = Modifier.padding(20.dp), content = content)
+        Column(modifier = Modifier.padding(18.dp), content = content)
     }
 }
 
@@ -76,7 +91,15 @@ fun CardTitle(text: String, icon: String = "") {
             Text(icon, fontSize = 20.sp)
             Spacer(Modifier.width(8.dp))
         }
-        Text(text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = DarkGreen)
+        Text(
+            text,
+            fontSize = 17.sp,
+            lineHeight = 22.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = DarkGreen,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
     }
     Spacer(Modifier.height(14.dp))
 }
@@ -94,24 +117,41 @@ fun StatCard(
     modifier: Modifier = Modifier
 ) {
     val bg = if (isPrimary)
-        Brush.linearGradient(listOf(PrimaryGreen, DarkGreen))
+        Brush.linearGradient(listOf(AccentTeal, PrimaryGreen))
     else
-        Brush.linearGradient(listOf(SoftMint, LightMint))
+        Brush.linearGradient(listOf(White, PaleGreen))
     val textColor = if (isPrimary) White else DarkGreen
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
+            .heightIn(min = 92.dp)
+            .clip(RoundedCornerShape(10.dp))
             .background(bg)
-            .padding(18.dp),
+            .padding(horizontal = 12.dp, vertical = 14.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(icon, fontSize = 22.sp)
-            Spacer(Modifier.height(8.dp))
-            Text(value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = textColor)
+            Text(icon, fontSize = 19.sp)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                value,
+                fontSize = 21.sp,
+                lineHeight = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(Modifier.height(2.dp))
-            Text(label, fontSize = 12.sp, color = textColor.copy(alpha = 0.8f))
+            Text(
+                label,
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                color = textColor.copy(alpha = 0.82f),
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -130,12 +170,12 @@ fun BmiCategoryBadge(category: String) {
         else -> DarkText
     }
     Surface(
-        shape = RoundedCornerShape(50.dp),
+        shape = RoundedCornerShape(8.dp),
         color = color
     ) {
         Text(
             text = category,
-            modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             color = White,
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp
@@ -150,7 +190,7 @@ fun BmiCategoryBadge(category: String) {
 @Composable
 fun ExplanationBox(text: String) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         color = PaleGreen,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -162,7 +202,58 @@ fun ExplanationBox(text: String) {
 }
 
 // ═══════════════════════════════════════════════════
-// PRIMARY BUTTON — Green gradient with loading
+// MESSAGE BANNER — Compact success/error feedback
+// ═══════════════════════════════════════════════════
+
+@Composable
+fun MessageBanner(
+    message: String,
+    isError: Boolean = false,
+    onDismiss: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = if (isError) BmiObese.copy(alpha = 0.10f) else PaleGreen,
+        border = BorderStroke(1.dp, if (isError) BmiObese.copy(alpha = 0.20f) else BorderLight),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                if (isError) "!" else "✓",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isError) BmiObese else DarkGreen
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                message,
+                modifier = Modifier.weight(1f),
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                color = if (isError) BmiObese else DarkGreen,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (onDismiss != null) {
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "Dismiss",
+                    modifier = Modifier.clickable { onDismiss() },
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isError) BmiObese else PrimaryGreen
+                )
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════
+// PRIMARY BUTTON — Branded action with loading
 // ═══════════════════════════════════════════════════
 
 @Composable
@@ -170,14 +261,20 @@ fun PrimaryButton(
     text: String,
     onClick: () -> Unit,
     isLoading: Boolean = false,
+    loadingText: String = "Analyzing...",
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(54.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 50.dp),
         shape = RoundedCornerShape(ButtonRadius),
-        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
-        enabled = !isLoading
+        colors = ButtonDefaults.buttonColors(
+            containerColor = PrimaryGreen,
+            disabledContainerColor = LightMint,
+            disabledContentColor = DarkGreen
+        ),
+        enabled = enabled && !isLoading
     ) {
         if (isLoading) {
             CircularProgressIndicator(
@@ -186,7 +283,7 @@ fun PrimaryButton(
                 strokeWidth = 2.dp
             )
             Spacer(Modifier.width(12.dp))
-            Text("Analyzing...", color = White, fontWeight = FontWeight.SemiBold)
+            Text(loadingText, color = White, fontWeight = FontWeight.SemiBold)
         } else {
             Text(text, color = White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
         }
@@ -207,28 +304,44 @@ fun DashboardCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 84.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CardRadius),
         colors = CardDefaults.cardColors(containerColor = White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        border = BorderStroke(1.dp, BorderLight),
+        elevation = CardDefaults.cardElevation(defaultElevation = CardElevation)
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(10.dp),
                 color = PaleGreen,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(52.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(icon, fontSize = 26.sp)
+                    Text(icon, fontSize = 24.sp)
                 }
             }
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = DarkText)
-                Text(subtitle, fontSize = 13.sp, color = MediumText)
+                Text(
+                    title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = DarkText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    subtitle,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    color = MediumText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
             Text("→", fontSize = 20.sp, color = PrimaryGreen, fontWeight = FontWeight.Bold)
         }
@@ -242,12 +355,12 @@ fun DashboardCard(
 @Composable
 fun NutrientBadge(text: String, isPrimary: Boolean = false) {
     Surface(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(8.dp),
         color = if (isPrimary) PrimaryGreen else PaleGreen
     ) {
         Text(
             text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             color = if (isPrimary) White else DarkGreen
@@ -285,7 +398,7 @@ fun MacroProgressBar(
                 .height(10.dp)
                 .clip(RoundedCornerShape(5.dp)),
             color = color,
-            trackColor = PaleGreen,
+            trackColor = LightGray,
         )
         Spacer(Modifier.height(14.dp))
     }

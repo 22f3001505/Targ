@@ -223,7 +223,10 @@ private fun AuthForms(viewModel: HealthViewModel, isLoading: Boolean) {
             shape = RoundedCornerShape(12.dp),
             color = if (isLogin) PrimaryGreen else White,
             shadowElevation = if (isLogin) 4.dp else 1.dp,
-            onClick = { isLogin = true },
+            onClick = {
+                isLogin = true
+                viewModel.clearError()
+            },
             modifier = Modifier.weight(1f)
         ) {
             Text("🔑 Login",
@@ -237,7 +240,10 @@ private fun AuthForms(viewModel: HealthViewModel, isLoading: Boolean) {
             shape = RoundedCornerShape(12.dp),
             color = if (!isLogin) PrimaryGreen else White,
             shadowElevation = if (!isLogin) 4.dp else 1.dp,
-            onClick = { isLogin = false },
+            onClick = {
+                isLogin = false
+                viewModel.clearError()
+            },
             modifier = Modifier.weight(1f)
         ) {
             Text("📝 Sign Up",
@@ -281,18 +287,31 @@ private fun AuthForms(viewModel: HealthViewModel, isLoading: Boolean) {
 private fun LoginForm(viewModel: HealthViewModel, isLoading: Boolean) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var localError by remember { mutableStateOf<String?>(null) }
 
     TargCard {
         CardTitle("🔑 Login to TARG", "")
+        localError?.let {
+            AuthValidationMessage(it)
+            Spacer(Modifier.height(10.dp))
+        }
         OutlinedTextField(
-            value = username, onValueChange = { username = it },
+            value = username, onValueChange = {
+                username = it
+                localError = null
+                viewModel.clearError()
+            },
             label = { Text("Username or email") },
             modifier = Modifier.fillMaxWidth(), singleLine = true,
             shape = RoundedCornerShape(12.dp)
         )
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(
-            value = password, onValueChange = { password = it },
+            value = password, onValueChange = {
+                password = it
+                localError = null
+                viewModel.clearError()
+            },
             label = { Text("Password") },
             modifier = Modifier.fillMaxWidth(), singleLine = true,
             shape = RoundedCornerShape(12.dp),
@@ -301,8 +320,20 @@ private fun LoginForm(viewModel: HealthViewModel, isLoading: Boolean) {
         Spacer(Modifier.height(16.dp))
         PrimaryButton(
             text = "🔑 Login",
-            onClick = { if (username.isNotBlank() && password.isNotBlank()) viewModel.login(username, password) },
-            isLoading = isLoading
+            onClick = {
+                val cleanedUsername = username.trim()
+                localError = when {
+                    cleanedUsername.isBlank() -> "Enter your username or email."
+                    password.isBlank() -> "Enter your password."
+                    else -> null
+                }
+                if (localError == null) {
+                    viewModel.login(cleanedUsername, password)
+                }
+            },
+            isLoading = isLoading,
+            loadingText = "Signing in...",
+            enabled = !isLoading
         )
     }
 }
@@ -313,25 +344,43 @@ private fun SignupForm(viewModel: HealthViewModel, isLoading: Boolean) {
     var email by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var localError by remember { mutableStateOf<String?>(null) }
 
     TargCard {
         CardTitle("📝 Create Account", "")
+        localError?.let {
+            AuthValidationMessage(it)
+            Spacer(Modifier.height(10.dp))
+        }
         OutlinedTextField(
-            value = fullName, onValueChange = { fullName = it },
+            value = fullName, onValueChange = {
+                fullName = it
+                localError = null
+                viewModel.clearError()
+            },
             label = { Text("Full Name") },
             modifier = Modifier.fillMaxWidth(), singleLine = true,
             shape = RoundedCornerShape(12.dp)
         )
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(
-            value = email, onValueChange = { email = it },
+            value = email, onValueChange = {
+                email = it
+                localError = null
+                viewModel.clearError()
+            },
             label = { Text("Email") },
             modifier = Modifier.fillMaxWidth(), singleLine = true,
             shape = RoundedCornerShape(12.dp)
         )
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(
-            value = username, onValueChange = { username = it },
+            value = username, onValueChange = {
+                username = it
+                localError = null
+                viewModel.clearError()
+            },
             label = { Text("Username") },
             supportingText = { Text("3-32 chars: letters, numbers, _, . or -") },
             modifier = Modifier.fillMaxWidth(), singleLine = true,
@@ -339,9 +388,25 @@ private fun SignupForm(viewModel: HealthViewModel, isLoading: Boolean) {
         )
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(
-            value = password, onValueChange = { password = it },
+            value = password, onValueChange = {
+                password = it
+                localError = null
+                viewModel.clearError()
+            },
             label = { Text("Password") },
             supportingText = { Text("Minimum 8 characters with a letter and number") },
+            modifier = Modifier.fillMaxWidth(), singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            visualTransformation = PasswordVisualTransformation()
+        )
+        Spacer(Modifier.height(10.dp))
+        OutlinedTextField(
+            value = confirmPassword, onValueChange = {
+                confirmPassword = it
+                localError = null
+                viewModel.clearError()
+            },
+            label = { Text("Confirm Password") },
             modifier = Modifier.fillMaxWidth(), singleLine = true,
             shape = RoundedCornerShape(12.dp),
             visualTransformation = PasswordVisualTransformation()
@@ -350,15 +415,56 @@ private fun SignupForm(viewModel: HealthViewModel, isLoading: Boolean) {
         PrimaryButton(
             text = "📝 Create Account",
             onClick = {
+                val cleanedEmail = email.trim()
+                val cleanedUsername = username.trim()
+                val cleanedFullName = fullName.trim()
                 val hasLetter = password.any { it.isLetter() }
                 val hasNumber = password.any { it.isDigit() }
-                if (email.isNotBlank() && username.isNotBlank() && password.length >= 8 && hasLetter && hasNumber) {
-                    viewModel.signup(email, username, password, fullName)
+                localError = when {
+                    cleanedFullName.isBlank() -> "Enter your full name."
+                    !isLikelyEmail(cleanedEmail) -> "Enter a valid email address."
+                    !isValidSignupUsername(cleanedUsername) -> "Username must be 3-32 characters and can use letters, numbers, _, . or -."
+                    password.length < 8 -> "Password must be at least 8 characters."
+                    password.trim() != password -> "Password cannot start or end with spaces."
+                    !hasLetter || !hasNumber -> "Password must include at least one letter and one number."
+                    password != confirmPassword -> "Passwords do not match."
+                    else -> null
+                }
+                if (localError == null) {
+                    viewModel.signup(cleanedEmail, cleanedUsername, password, cleanedFullName)
                 }
             },
-            isLoading = isLoading
+            isLoading = isLoading,
+            loadingText = "Creating account...",
+            enabled = !isLoading
         )
     }
+}
+
+@Composable
+private fun AuthValidationMessage(message: String) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = BmiObese.copy(alpha = 0.1f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "⚠️ $message",
+            modifier = Modifier.padding(12.dp),
+            color = BmiObese,
+            fontSize = 13.sp
+        )
+    }
+}
+
+private fun isLikelyEmail(value: String): Boolean {
+    val at = value.indexOf("@")
+    val dot = value.lastIndexOf(".")
+    return at > 0 && dot > at + 1 && dot < value.lastIndex - 1
+}
+
+private fun isValidSignupUsername(value: String): Boolean {
+    return Regex("^[a-zA-Z0-9_][a-zA-Z0-9_.-]{2,31}$").matches(value)
 }
 
 private fun formatCount(count: Int): String {

@@ -258,13 +258,7 @@ fun PlannerScreen(viewModel: HealthViewModel? = null) {
 
             actionMessage?.let {
                 Spacer(Modifier.height(10.dp))
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = PaleGreen,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(it, modifier = Modifier.padding(12.dp), fontSize = 13.sp, color = DarkGreen)
-                }
+                MessageBanner(it, onDismiss = { viewModel?.clearActionMessage() })
             }
         }
 

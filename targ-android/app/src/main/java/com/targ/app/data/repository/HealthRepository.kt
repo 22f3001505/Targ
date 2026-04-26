@@ -9,8 +9,10 @@ class HealthRepository {
 
     private fun apiError(defaultMessage: String, errorBody: String?): String {
         if (errorBody.isNullOrBlank()) return defaultMessage
-        val match = Regex("\"detail\"\\s*:\\s*\"([^\"]+)\"").find(errorBody)
-        return match?.groupValues?.getOrNull(1) ?: defaultMessage
+        val detail = Regex("\"detail\"\\s*:\\s*\"([^\"]+)\"").find(errorBody)
+        if (detail != null) return detail.groupValues.getOrNull(1) ?: defaultMessage
+        val validationMessage = Regex("\"msg\"\\s*:\\s*\"([^\"]+)\"").find(errorBody)
+        return validationMessage?.groupValues?.getOrNull(1) ?: defaultMessage
     }
 
     // ═══════════════════════════════════════════

@@ -8,6 +8,8 @@ import requests
 import time
 from pathlib import Path
 from api import APIClient, BASE_URL
+from ui.polish import inject_ui_polish
+from ui.ux import handle_auth_expired, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -20,8 +22,7 @@ st.set_page_config(
 
 LOGO_PATH = Path(__file__).parent.parent / "logo.png"
 
-if not st.session_state.get("auth_token"):
-    st.switch_page("pages/0_🔐_Account.py")
+require_login("pages/3_🏋️_Workout_Recommendation.py")
 
 # ═══════════════════════════════════════════════════════════════
 # PREMIUM CSS
@@ -258,6 +259,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+inject_ui_polish()
 
 # ═══════════════════════════════════════════════════════════════
 # SIDEBAR
@@ -536,7 +538,7 @@ with results_col:
                 else:
                     st.warning("Could not calculate. Try again.")
         else:
-            st.info("Exercise database unavailable. Start the backend to access 248 exercises.")
+            st.info("Exercise database unavailable. Start the backend to access the exercise library.")
         
         st.markdown('</div>', unsafe_allow_html=True)
         
@@ -564,16 +566,18 @@ with results_col:
                         notes=wo_notes,
                         auth_token=auth_token
                     )
+                    handle_auth_expired(result)
                     if result["success"]:
                         st.success("✅ Workout logged successfully!")
                         st.balloons()
                     else:
-                        st.error("Failed to log workout")
+                        st.error(result.get("error", "Failed to log workout"))
             
             st.markdown('</div>', unsafe_allow_html=True)
             
             # ─── WORKOUT HISTORY ───
             history = APIClient.get_workout_history(auth_token, limit=5)
+            handle_auth_expired(history)
             if history["success"] and history["data"]:
                 st.markdown('<div class="card">', unsafe_allow_html=True)
                 st.markdown('<div class="card-title">📋 Recent Workouts</div>', unsafe_allow_html=True)

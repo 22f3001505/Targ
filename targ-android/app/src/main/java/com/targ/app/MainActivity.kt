@@ -104,7 +104,7 @@ private fun MainContent() {
         bottomBar = {
             NavigationBar(
                 containerColor = White,
-                tonalElevation = 0.dp
+                tonalElevation = 6.dp
             ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
@@ -141,7 +141,7 @@ private fun MainContent() {
                             selectedTextColor = PrimaryGreen,
                             unselectedIconColor = MediumText,
                             unselectedTextColor = MediumText,
-                            indicatorColor = PaleGreen
+                            indicatorColor = LightMint
                         )
                     )
                 }

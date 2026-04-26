@@ -166,6 +166,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                         fetchUserStats()
                         loadSavedMeals()
                         loadWater()
+                        loadMealPlan()
                     }
                     .onFailure {
                         clearStoredSession()
@@ -200,6 +201,12 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
         _savedMeals.value = emptyList()
         _waterData.value = null
         _mealPlan.value = null
+        _healthData.value = null
+        _dietData.value = emptyList()
+        _foodResults.value = emptyList()
+        _calorieEstimate.value = null
+        _errorMessage.value = null
+        _actionMessage.value = null
     }
 
     fun login(username: String, password: String) {
@@ -207,6 +214,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 _isLoading.value = true
                 _errorMessage.value = null
+                _actionMessage.value = null
                 val result = repository.login(username, password)
                 result.onSuccess {
                     _authToken.value = it.accessToken
@@ -215,6 +223,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                     fetchUserStats()
                     loadSavedMeals()
                     loadWater()
+                    loadMealPlan()
                 }
                 result.onFailure { _errorMessage.value = it.message }
             } catch (e: Exception) {
@@ -230,13 +239,16 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 _isLoading.value = true
                 _errorMessage.value = null
+                _actionMessage.value = null
                 val result = repository.signup(email, username, password, fullName)
                 result.onSuccess {
                     _authToken.value = it.accessToken
                     _userData.value = it.user
                     persistSession(it.accessToken, it.user)
                     fetchUserStats()
+                    loadSavedMeals()
                     loadWater()
+                    loadMealPlan()
                 }
                 result.onFailure { _errorMessage.value = it.message }
             } catch (e: Exception) {
@@ -293,7 +305,13 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                 _errorMessage.value = null
                 val request = HealthRequest(age, height, weight, gender, activityLevel)
                 val result = repository.getHealthAnalysis(request, _authToken.value)
-                result.onSuccess { _healthData.value = it }
+                result.onSuccess {
+                    _healthData.value = it
+                    if (_authToken.value != null) {
+                        fetchUserStats()
+                        _actionMessage.value = "Health analysis saved"
+                    }
+                }
                 result.onFailure { _errorMessage.value = it.message }
             } catch (e: Exception) {
                 _errorMessage.value = "Analysis error: ${e.message}"
@@ -366,43 +384,63 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
     // MEAL & WORKOUT LOGGING
     // ═══════════════════════════════════════════
     fun saveMeal(name: String, calories: Double, protein: Double, carbs: Double, fat: Double) {
-        val token = _authToken.value ?: return
+        val token = _authToken.value ?: run {
+            _actionMessage.value = "Login to sync meals"
+            return
+        }
         viewModelScope.launch {
             try {
                 repository.saveMeal(token, SaveMealRequest(name, "tracked", calories, protein, carbs, fat))
                     .onSuccess {
+                        _actionMessage.value = "Meal added to today"
                         loadSavedMeals()
                         fetchUserStats()
                     }
+                    .onFailure { _errorMessage.value = it.message }
             } catch (e: Exception) {
                 Log.e("TARG", "Save meal failed", e)
+                _errorMessage.value = "Meal sync failed: ${e.message}"
             }
         }
     }
 
     fun clearTrackedMeals() {
-        val token = _authToken.value ?: return
+        val token = _authToken.value ?: run {
+            _actionMessage.value = "Local meals cleared. Login to sync meal history."
+            return
+        }
         viewModelScope.launch {
             try {
                 repository.clearTrackedMeals(token)
                     .onSuccess {
+                        _actionMessage.value = "Today's meals cleared"
                         loadSavedMeals()
                         fetchUserStats()
                     }
+                    .onFailure { _errorMessage.value = it.message }
             } catch (e: Exception) {
                 Log.e("TARG", "Clear meals failed", e)
+                _errorMessage.value = "Meal clear failed: ${e.message}"
             }
         }
     }
 
     fun logWorkout(focus: String, exercises: List<String>, duration: Int, caloriesBurned: Int) {
-        val token = _authToken.value ?: return
+        val token = _authToken.value ?: run {
+            _actionMessage.value = "Login to sync workouts"
+            return
+        }
         viewModelScope.launch {
             try {
                 repository.logWorkout(token, LogWorkoutRequest(focus, exercises, duration, caloriesBurned))
-                    .onSuccess { fetchUserStats() }
+                    .onSuccess {
+                        _actionMessage.value = "Workout logged"
+                        fetchUserStats()
+                    }
+                    .onFailure { _errorMessage.value = it.message }
             } catch (e: Exception) {
                 Log.e("TARG", "Log workout failed", e)
+                _errorMessage.value = "Workout log failed: ${e.message}"
             }
         }
     }
@@ -441,13 +479,21 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun logWater(glasses: Int = 0, ml: Int = 0) {
-        val token = _authToken.value ?: return
+        val token = _authToken.value ?: run {
+            _actionMessage.value = "Login to sync water"
+            return
+        }
         viewModelScope.launch {
             try {
                 repository.logWater(token, glasses, ml)
-                    .onSuccess { _waterData.value = it }
+                    .onSuccess {
+                        _waterData.value = it
+                        _actionMessage.value = "Water updated"
+                    }
+                    .onFailure { _errorMessage.value = it.message }
             } catch (e: Exception) {
                 Log.e("TARG", "Log water failed", e)
+                _errorMessage.value = "Water sync failed: ${e.message}"
             }
         }
     }

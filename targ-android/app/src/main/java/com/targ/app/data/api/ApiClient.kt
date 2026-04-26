@@ -14,14 +14,17 @@ object ApiClient {
         if (it.endsWith("/")) it else "$it/"
     }
 
-    // Lenient Gson handles mixed types (int/string) without crashing
+    // Central Gson instance for Retrofit model conversion.
     private val gson = GsonBuilder()
-        .setLenient()
         .serializeNulls()
         .create()
 
     private val logging = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.BASIC
+        } else {
+            HttpLoggingInterceptor.Level.NONE
+        }
     }
 
     private val httpClient = OkHttpClient.Builder()

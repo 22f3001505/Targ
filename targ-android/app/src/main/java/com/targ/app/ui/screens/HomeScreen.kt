@@ -61,15 +61,15 @@ fun HomeScreen(navController: NavController, viewModel: HealthViewModel) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(Brush.linearGradient(listOf(PrimaryGreen, DarkGreen)))
-                .padding(32.dp),
+                .clip(RoundedCornerShape(14.dp))
+                .background(Brush.linearGradient(listOf(AccentTeal, PrimaryGreen, DarkGreen)))
+                .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("🥗", fontSize = 48.sp)
+                Text("🥗", fontSize = 42.sp)
                 Spacer(Modifier.height(8.dp))
-                Text("TARG", fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = White)
+                Text("TARG", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = White)
                 Text("AI-Powered Health & Nutrition", fontSize = 14.sp,
                     color = White.copy(alpha = 0.85f))
 
@@ -91,7 +91,7 @@ fun HomeScreen(navController: NavController, viewModel: HealthViewModel) {
 
                 // Stats Row — Real data from API
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     StatsChip(recipeCount, "Recipes", Modifier.weight(1f))
@@ -242,15 +242,15 @@ fun HomeScreen(navController: NavController, viewModel: HealthViewModel) {
 @Composable
 private fun StatsChip(value: String, label: String, modifier: Modifier = Modifier) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         color = White.copy(alpha = 0.15f),
         modifier = modifier
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp)
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp)
         ) {
-            Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = White)
+            Text(value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
             Text(label, fontSize = 11.sp, color = White.copy(alpha = 0.8f))
         }
     }

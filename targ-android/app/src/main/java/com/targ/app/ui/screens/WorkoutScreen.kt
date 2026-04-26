@@ -26,6 +26,8 @@ fun WorkoutScreen(viewModel: HealthViewModel) {
     val categories by viewModel.exerciseCategories.collectAsState()
     val calorieEstimate by viewModel.calorieEstimate.collectAsState()
     val isExerciseLoading by viewModel.isExerciseLoading.collectAsState()
+    val actionMessage by viewModel.actionMessage.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     // Load exercises on first render
     LaunchedEffect(Unit) {
@@ -51,6 +53,13 @@ fun WorkoutScreen(viewModel: HealthViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         PageHeader(title = "🏋️ Workout Plans", subtitle = "Personalized exercise routines & calorie calculator")
+
+        actionMessage?.let {
+            MessageBanner(it, onDismiss = { viewModel.clearActionMessage() })
+        }
+        errorMessage?.let {
+            MessageBanner(it, isError = true, onDismiss = { viewModel.clearError() })
+        }
 
         // ─── FLOW LOCK ───
         if (!viewModel.isHealthAnalyzed) {

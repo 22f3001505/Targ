@@ -6,6 +6,8 @@ import streamlit as st
 import requests
 from pathlib import Path
 from api import APIClient, BASE_URL
+from ui.polish import inject_ui_polish
+from ui.ux import handle_auth_expired, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -18,8 +20,7 @@ st.set_page_config(
 
 LOGO_PATH = Path(__file__).parent.parent / "logo.png"
 
-if not st.session_state.get("auth_token"):
-    st.switch_page("pages/0_🔐_Account.py")
+require_login("pages/2_🔍_Custom_Food_Recommendation.py")
 
 # ═══════════════════════════════════════════════════════════════
 # PREMIUM CSS
@@ -246,6 +247,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+inject_ui_polish()
 
 # ═══════════════════════════════════════════════════════════════
 # SIDEBAR
@@ -378,6 +380,7 @@ if st.session_state.search_mode == "nutrition":
                                         protein=float(r_pro), carbs=float(r_carb), fat=float(r_fat),
                                         meal_type="saved", auth_token=auth_token
                                     )
+                                    handle_auth_expired(result_save)
                                     if result_save["success"]:
                                         st.success(f"⭐ Saved: {r_name[:30]}")
                         
@@ -462,6 +465,7 @@ else:
                                         protein=float(pro), carbs=float(carb), fat=float(fat_val),
                                         meal_type="saved", auth_token=auth_token
                                     )
+                                    handle_auth_expired(result_save)
                                     if result_save["success"]:
                                         st.success(f"⭐ Saved: {name[:30]}")
                         

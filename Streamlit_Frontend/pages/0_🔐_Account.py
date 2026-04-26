@@ -3,10 +3,11 @@ TARG - Login & Signup Page
 Premium Authentication Flow
 """
 import streamlit as st
-import requests
 import plotly.graph_objects as go
 from pathlib import Path
-from api import APIClient, BASE_URL
+from api import APIClient
+from ui.polish import inject_ui_polish
+from ui.ux import clear_user_session, consume_auth_redirect, handle_auth_expired, render_auth_redirect_notice
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -102,6 +103,7 @@ st.markdown("""
     .stButton > button * { color: white !important; }
 </style>
 """, unsafe_allow_html=True)
+inject_ui_polish()
 
 # ═══════════════════════════════════════════════════════════════
 # SESSION STATE
@@ -124,8 +126,7 @@ with st.sidebar:
         user = st.session_state.user_data
         st.success(f"✅ Logged in as **{user.get('username', '')}**")
         if st.button("🚪 Logout", use_container_width=True):
-            st.session_state.auth_token = None
-            st.session_state.user_data = None
+            clear_user_session()
             st.rerun()
     else:
         st.caption("Login or create an account to save your data.")
@@ -145,6 +146,7 @@ st.markdown("""
 # ═══════════════════════════════════════════════════════════════
 if st.session_state.auth_token:
     user = st.session_state.user_data
+    pending_target = st.session_state.get("auth_redirect_target")
     
     st.markdown(f"""
     <div class="success-banner">
@@ -165,9 +167,14 @@ if st.session_state.auth_token:
         st.markdown(f"**Full Name:** {user.get('full_name', '-')}")
     
     st.markdown('</div>', unsafe_allow_html=True)
+
+    if pending_target:
+        if st.button("Continue where you left off", use_container_width=True, type="primary"):
+            st.switch_page(consume_auth_redirect())
     
     # User stats via APIClient
     stats_result = APIClient.get_user_stats(st.session_state.auth_token)
+    handle_auth_expired(stats_result)
     if stats_result["success"]:
         stats = stats_result["data"]
         st.markdown("---")
@@ -196,6 +203,7 @@ if st.session_state.auth_token:
     st.markdown("### 📈 Health Progress")
     
     trend = APIClient.get_health_trend(st.session_state.auth_token)
+    handle_auth_expired(trend)
     if trend["success"] and trend["data"]:
         trend_data = trend["data"]
         dates = [d["date"] for d in trend_data]
@@ -249,6 +257,7 @@ if st.session_state.auth_token:
     st.markdown("### ⭐ Saved Recipes")
     
     saved = APIClient.get_saved_meals(st.session_state.auth_token, meal_type="saved", limit=50)
+    handle_auth_expired(saved)
     if saved["success"] and saved["data"]:
         for idx, meal in enumerate(saved["data"]):
             m_name = meal.get('meal_name', 'Recipe')
@@ -279,6 +288,7 @@ if st.session_state.auth_token:
     st.markdown("### 🏋️ Recent Workouts")
     
     workouts = APIClient.get_workout_history(st.session_state.auth_token, limit=5)
+    handle_auth_expired(workouts)
     if workouts["success"] and workouts["data"]:
         for log in workouts["data"]:
             log_date = str(log.get('logged_at', ''))[:10]
@@ -296,6 +306,7 @@ if st.session_state.auth_token:
 # LOGIN / SIGNUP FORMS
 # ═══════════════════════════════════════════════════════════════
 else:
+    render_auth_redirect_notice()
     tab_login, tab_signup = st.tabs(["🔑 Login", "📝 Sign Up"])
     
     # ─── LOGIN ───
@@ -308,25 +319,15 @@ else:
             
             if st.form_submit_button("🔑 Login", use_container_width=True):
                 if login_username and login_password:
-                    try:
-                        response = requests.post(
-                            f"{BASE_URL}/auth/login",
-                            json={"username": login_username, "password": login_password},
-                            timeout=10
-                        )
-                        
-                        if response.status_code == 200:
-                            data = response.json()
-                            st.session_state.auth_token = data["access_token"]
-                            st.session_state.user_data = data["user"]
-                            st.success("✅ Login successful!")
-                            st.switch_page("Hello.py")
-                        elif response.status_code == 401:
-                            st.error("❌ Invalid username/email or password")
-                        else:
-                            st.error(f"Error: {response.json().get('detail', 'Unknown error')}")
-                    except requests.exceptions.ConnectionError:
-                        st.error("⚠️ Cannot connect to backend. Make sure the API is running.")
+                    result = APIClient.login(login_username, login_password)
+                    if result["success"]:
+                        data = result["data"]
+                        st.session_state.auth_token = data["access_token"]
+                        st.session_state.user_data = data["user"]
+                        st.success("✅ Login successful!")
+                        st.switch_page(consume_auth_redirect())
+                    else:
+                        st.error(f"❌ {result['error']}")
                 else:
                     st.warning("Please fill in all fields")
         
@@ -353,29 +354,16 @@ else:
                 elif signup_password != signup_confirm:
                     st.error("Passwords don't match")
                 else:
-                    try:
-                        response = requests.post(
-                            f"{BASE_URL}/auth/signup",
-                            json={
-                                "email": signup_email,
-                                "username": signup_username,
-                                "password": signup_password,
-                                "full_name": signup_fullname
-                            },
-                            timeout=10
-                        )
-                        
-                        if response.status_code == 200:
-                            data = response.json()
-                            st.session_state.auth_token = data["access_token"]
-                            st.session_state.user_data = data["user"]
-                            st.success("✅ Account created!")
-                            st.balloons()
-                            st.switch_page("Hello.py")
-                        else:
-                            st.error(f"Error: {response.json().get('detail', 'Unknown error')}")
-                    except requests.exceptions.ConnectionError:
-                        st.error("⚠️ Cannot connect to backend. Make sure the API is running.")
+                    result = APIClient.signup(signup_email, signup_username, signup_password, signup_fullname)
+                    if result["success"]:
+                        data = result["data"]
+                        st.session_state.auth_token = data["access_token"]
+                        st.session_state.user_data = data["user"]
+                        st.success("✅ Account created!")
+                        st.balloons()
+                        st.switch_page(consume_auth_redirect())
+                    else:
+                        st.error(f"Error: {result['error']}")
         
         st.markdown('</div>', unsafe_allow_html=True)
     

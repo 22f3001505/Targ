@@ -70,11 +70,15 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
     val popularFoodsState = viewModel?.popularFoods?.collectAsState()
     val waterDataState = viewModel?.waterData?.collectAsState()
     val isFoodLoadingState = viewModel?.isFoodLoading?.collectAsState()
+    val actionMessageState = viewModel?.actionMessage?.collectAsState()
+    val errorMessageState = viewModel?.errorMessage?.collectAsState()
     val savedMeals = savedMealsState?.value ?: emptyList()
     val foodResults = foodResultsState?.value ?: emptyList()
     val popularFoods = popularFoodsState?.value ?: emptyList()
     val waterData = waterDataState?.value
     val isFoodLoading = isFoodLoadingState?.value ?: false
+    val actionMessage = actionMessageState?.value
+    val errorMessage = errorMessageState?.value
 
     fun addMeal(name: String, cal: Int, pro: Int, carbs: Int, fat: Int) {
         meals.add(mapOf(
@@ -134,6 +138,13 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         PageHeader(title = "📊 Macro Tracker", subtitle = "Track nutrition, water & daily goals")
+
+        actionMessage?.let {
+            MessageBanner(it, onDismiss = { viewModel?.clearActionMessage() })
+        }
+        errorMessage?.let {
+            MessageBanner(it, isError = true, onDismiss = { viewModel?.clearError() })
+        }
 
         // ─── GOALS (editable) ───
         TargCard {

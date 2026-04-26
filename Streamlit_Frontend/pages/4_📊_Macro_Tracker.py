@@ -9,6 +9,8 @@ import requests
 from pathlib import Path
 from datetime import datetime
 from api import APIClient, BASE_URL
+from ui.polish import inject_ui_polish
+from ui.ux import handle_auth_expired, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -21,8 +23,7 @@ st.set_page_config(
 
 LOGO_PATH = Path(__file__).parent.parent / "logo.png"
 
-if not st.session_state.get("auth_token"):
-    st.switch_page("pages/0_🔐_Account.py")
+require_login("pages/4_📊_Macro_Tracker.py")
 
 # ═══════════════════════════════════════════════════════════════
 # PREMIUM CSS
@@ -238,6 +239,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+inject_ui_polish()
 
 # ═══════════════════════════════════════════════════════════════
 # SIDEBAR
@@ -299,6 +301,7 @@ if 'meals_logged' not in st.session_state:
     auth_token = st.session_state.get('auth_token')
     if auth_token:
         saved = APIClient.get_saved_meals(auth_token, meal_type="tracked", limit=50)
+        handle_auth_expired(saved)
         if saved["success"] and saved["data"]:
             for m in saved["data"]:
                 st.session_state.meals_logged.append({
@@ -380,11 +383,12 @@ with left_col:
                 # Save to backend if authenticated
                 auth_token = st.session_state.get('auth_token')
                 if auth_token:
-                    APIClient.save_meal(
+                    save_result = APIClient.save_meal(
                         meal_name=meal_name, calories=float(meal_cal),
                         protein=float(meal_protein), carbs=float(meal_carbs),
                         fat=float(meal_fat), meal_type="tracked", auth_token=auth_token
                     )
+                    handle_auth_expired(save_result)
                 
                 st.success(f"✅ Added: {meal_name}")
                 st.rerun()
@@ -518,11 +522,29 @@ with right_col:
             </div>
             """, unsafe_allow_html=True)
         
-        # Clear button
-        if st.button("🗑️ Clear All Meals", use_container_width=True):
-            st.session_state.meals_logged = []
-            st.session_state.totals = {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}
-            st.rerun()
+        if "confirm_clear_meals" not in st.session_state:
+            st.session_state.confirm_clear_meals = False
+
+        if not st.session_state.confirm_clear_meals:
+            if st.button("🗑️ Clear All Meals", use_container_width=True):
+                st.session_state.confirm_clear_meals = True
+                st.rerun()
+        else:
+            st.warning("Clear today's meal log? This cannot be undone.")
+            confirm_col, cancel_col = st.columns(2)
+            with confirm_col:
+                if st.button("Yes, clear meals", use_container_width=True):
+                    auth_token = st.session_state.get('auth_token')
+                    if auth_token:
+                        APIClient.clear_tracked_meals(auth_token)
+                    st.session_state.meals_logged = []
+                    st.session_state.totals = {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}
+                    st.session_state.confirm_clear_meals = False
+                    st.rerun()
+            with cancel_col:
+                if st.button("Cancel", use_container_width=True):
+                    st.session_state.confirm_clear_meals = False
+                    st.rerun()
     else:
         st.markdown("""
         <div style="text-align: center; padding: 30px; color: #666;">
@@ -592,7 +614,8 @@ with search_col:
                         st.session_state.totals["fat"] += meal["fat"]
                         auth_token = st.session_state.get('auth_token')
                         if auth_token:
-                            APIClient.save_meal(food["name"], food["calories"], food["protein"], food["carbs"], food["fat"], "tracked", auth_token)
+                            save_result = APIClient.save_meal(food["name"], food["calories"], food["protein"], food["carbs"], food["fat"], "tracked", auth_token)
+                            handle_auth_expired(save_result)
                         st.success(f"✅ Added {food['name']}")
                         st.rerun()
         elif food_query:
@@ -603,7 +626,7 @@ with result_col:
     <div class="card" style="text-align: center; padding: 24px;">
         <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; color: #333;">💡 Quick Tips</div>
         <div style="color: #666; line-height: 1.8;">
-            Search any food from our database of 375K+ recipes.<br/>
+            Search the active nutrition database.<br/>
             Click <strong>"Add to log"</strong> to auto-fill your macro tracker.<br/>
             Nutrition values are from real recipe data.
         </div>
@@ -621,6 +644,7 @@ if 'water_glasses' not in st.session_state:
     st.session_state.water_glasses = 0
     if auth_token:
         water_data = APIClient.get_water(auth_token)
+        handle_auth_expired(water_data)
         if water_data["success"]:
             st.session_state.water_glasses = water_data["data"].get("glasses", 0)
 
@@ -647,12 +671,14 @@ with w2:
     if st.button("💧 +1 Glass", use_container_width=True):
         st.session_state.water_glasses += 1
         if auth_token:
-            APIClient.log_water(glasses=1, auth_token=auth_token)
+            water_result = APIClient.log_water(glasses=1, auth_token=auth_token)
+            handle_auth_expired(water_result)
         st.rerun()
 
 with w3:
     if st.button("💧 +2 Glasses", use_container_width=True):
         st.session_state.water_glasses += 2
         if auth_token:
-            APIClient.log_water(glasses=2, auth_token=auth_token)
+            water_result = APIClient.log_water(glasses=2, auth_token=auth_token)
+            handle_auth_expired(water_result)
         st.rerun()

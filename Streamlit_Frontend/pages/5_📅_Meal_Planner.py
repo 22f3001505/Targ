@@ -6,6 +6,8 @@ import streamlit as st
 import random
 from pathlib import Path
 from api import APIClient, BASE_URL
+from ui.polish import inject_ui_polish
+from ui.ux import handle_auth_expired, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -18,8 +20,7 @@ st.set_page_config(
 
 LOGO_PATH = Path(__file__).parent.parent / "logo.png"
 
-if not st.session_state.get("auth_token"):
-    st.switch_page("pages/0_🔐_Account.py")
+require_login("pages/5_📅_Meal_Planner.py")
 
 # ═══════════════════════════════════════════════════════════════
 # MEAL OPTIONS
@@ -304,6 +305,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+inject_ui_polish()
 
 # ═══════════════════════════════════════════════════════════════
 # SIDEBAR
@@ -550,14 +552,16 @@ if auth_token:
                     "dinner": st.session_state.get(f"{day}_dinner", "")
                 }
             result = APIClient.save_meal_plan(plan_data, auth_token)
+            handle_auth_expired(result)
             if result["success"]:
                 st.success("✅ Meal plan saved! It will be restored next time you visit.")
             else:
-                st.error("Failed to save plan")
+                st.error(result.get("error", "Failed to save plan"))
     
     with load_col:
         if st.button("📥 Load Saved Plan", use_container_width=True):
             result = APIClient.get_meal_plan(auth_token)
+            handle_auth_expired(result)
             if result["success"] and result["data"] and result["data"].get("plan_data"):
                 plan = result["data"]["plan_data"]
                 for day in DAYS:

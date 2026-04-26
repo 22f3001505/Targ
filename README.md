@@ -4,7 +4,7 @@
 
 **Targeted AI-based Recipe Generator**
 
-[![Version](https://img.shields.io/badge/version-7.1.0-green)]()
+[![Version](https://img.shields.io/badge/version-7.2.0-green)]()
 [![Python](https://img.shields.io/badge/Python-3.10+-blue)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.10-purple)]()
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-teal)]()
@@ -34,7 +34,7 @@
 
 ## 🎯 Overview
 
-TARG is a **production-grade health intelligence system** — 3 platforms, 9,108+ lines of code, 24 API endpoints, with a 375K+ recipe source dataset and a Render-friendly lite runtime index.
+TARG is a **production-grade health intelligence system** — 3 platforms, 9,108+ lines of code, 25 API endpoints, with a 375K+ recipe source dataset and a Render-friendly lite runtime index.
 
 | Metric | Value |
 |--------|-------|
@@ -43,7 +43,7 @@ TARG is a **production-grade health intelligence system** — 3 platforms, 9,108
 | **Backend** | 6 Python files · 1,536 LOC |
 | **Web Frontend** | 12 Python files · 4,516 LOC |
 | **Android App** | 16 Kotlin files · 3,056 LOC |
-| **API Endpoints** | 24 RESTful |
+| **API Endpoints** | 25 RESTful |
 | **Recipe Dataset** | 375,703 source recipes · 50K lite runtime sample |
 | **Exercise Database** | 198 exercises with MET values |
 | **Database Tables** | 5 |
@@ -57,14 +57,14 @@ TARG is a **production-grade health intelligence system** — 3 platforms, 9,108
 | Technology | Version | What It Is | How TARG Uses It |
 |------------|---------|-----------|------------------|
 | **Python** | 3.10+ | Programming language | Runtime for entire backend |
-| **FastAPI** | ≥0.115 | Async web framework | 24 REST API endpoints with auto OpenAPI docs, request validation, dependency injection |
+| **FastAPI** | ≥0.115 | Async web framework | 25 REST API endpoints with auto OpenAPI docs, request validation, dependency injection |
 | **Uvicorn** | ≥0.30 | ASGI server | Runs FastAPI on port 8080, handles HTTP with async I/O |
 | **Pydantic** | ≥2.10 | Data validation | Validates ALL request bodies — nutrition arrays, health inputs, auth forms |
 | **Scikit-learn** | ≥1.5 | Machine Learning | KNN with cosine similarity for recipe matching, StandardScaler for normalization |
 | **Pandas** | ≥2.2 | Data analysis | Loads 375K recipe CSV, DataFrame operations for filtering/extraction |
 | **NumPy** | ≥2.0 | Numerical computing | Array operations for ML input vectors |
 | **SQLAlchemy** | ≥2.0 | ORM | Maps Python classes to SQLite tables, session management, CRUD ops |
-| **python-jose** | ≥3.3 | JWT library | Creates/validates JSON Web Tokens for authentication (30-min expiry) |
+| **python-jose** | ≥3.3 | JWT library | Creates/validates JSON Web Tokens for authentication (7-day expiry) |
 | **Passlib+Bcrypt** | ≥1.7 | Password hashing | Salted Bcrypt hashing — original password never stored |
 | **python-multipart** | ≥0.0.9 | Form parser | Handles multipart form data for auth requests |
 
@@ -141,8 +141,8 @@ TARG is a **production-grade health intelligence system** — 3 platforms, 9,108
 │             API LAYER — FastAPI (Port 8080)                │
 │                        │                                  │
 │   ┌────────────────────▼────────────────────────────┐     │
-│   │           FastAPI v7.1.0  (1,536+ LOC)          │     │
-│   │           24 REST Endpoints + CORS              │     │
+│   │           FastAPI v7.2.0  (1,536+ LOC)          │     │
+│   │           25 REST Endpoints + CORS              │     │
 │   │                                                 │     │
 │   │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │     │
 │   │  │  Auth    │  │  Health  │  │  ML Engine   │  │     │
@@ -390,4 +390,4 @@ cd targ-android && ./gradlew assembleDebug
 
 ---
 
-**v7.1.0** | 35+ files | 9,108+ LOC | 24 endpoints | 375K source recipes | 198 exercises | April 2026
+**v7.2.0** | 35+ files | 9,108+ LOC | 25 endpoints | 375K source recipes | 198 exercises | April 2026

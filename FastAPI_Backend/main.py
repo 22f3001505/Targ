@@ -5,12 +5,13 @@ FastAPI Backend with Auth, Database, ML Recommendations, and Health Analysis
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Annotated, Any, List, Optional
 from datetime import datetime
 from pathlib import Path
 import os
 import pandas as pd
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 # Internal modules
@@ -35,7 +36,7 @@ from exercises_db import (
 # ═══════════════════════════════════════════════════
 # DATASET (memory-optimized for Render free tier 512MB)
 # ═══════════════════════════════════════════════════
-APP_VERSION = "7.1.0"
+APP_VERSION = "7.2.0"
 DATASET_DIR = Path(__file__).resolve().parent.parent / "Data"
 DATASET_LITE = DATASET_DIR / "dataset_lite.csv"
 DATASET_FULL = DATASET_DIR / "dataset.csv"
@@ -198,36 +199,65 @@ class HealthOutput(BaseModel):
     workout_plan: dict
 
 class SaveMealRequest(BaseModel):
-    meal_name: str
-    meal_type: str = "other"
-    calories: float = 0
-    protein: float = 0
-    carbs: float = 0
-    fat: float = 0
-    fiber: float = 0
+    meal_name: str = Field(..., min_length=1, max_length=300)
+    meal_type: str = Field("other", max_length=20)
+    calories: float = Field(0, ge=0, le=10000)
+    protein: float = Field(0, ge=0, le=1000)
+    carbs: float = Field(0, ge=0, le=1000)
+    fat: float = Field(0, ge=0, le=1000)
+    fiber: float = Field(0, ge=0, le=500)
     recipe_data: Optional[dict] = None
 
+    @field_validator("meal_name")
+    @classmethod
+    def clean_meal_name(cls, value: str) -> str:
+        value = " ".join(value.strip().split())
+        if not value:
+            raise ValueError("Meal name is required")
+        return value
+
+    @field_validator("meal_type")
+    @classmethod
+    def clean_meal_type(cls, value: str) -> str:
+        value = value.strip().lower() or "other"
+        allowed = {"breakfast", "lunch", "dinner", "snack", "saved", "tracked", "water", "other"}
+        if value not in allowed:
+            raise ValueError(f"Meal type must be one of: {sorted(allowed)}")
+        return value
+
 class LogWorkoutRequest(BaseModel):
-    workout_focus: str
-    exercises_completed: List[str] = []
-    duration_minutes: int = 0
-    calories_burned: int = 0
-    notes: str = ""
+    workout_focus: str = Field(..., min_length=1, max_length=100)
+    exercises_completed: List[str] = Field(default_factory=list, max_length=50)
+    duration_minutes: int = Field(0, ge=0, le=1440)
+    calories_burned: int = Field(0, ge=0, le=5000)
+    notes: str = Field("", max_length=2000)
+
+    @field_validator("workout_focus")
+    @classmethod
+    def clean_workout_focus(cls, value: str) -> str:
+        value = " ".join(value.strip().split())
+        if not value:
+            raise ValueError("Workout focus is required")
+        return value
+
+    @field_validator("notes")
+    @classmethod
+    def clean_notes(cls, value: str) -> str:
+        return " ".join(value.strip().split())
 
 class SaveMealPlanRequest(BaseModel):
-    plan_data: dict  # {"Monday": {"breakfast": "...", "lunch": "...", "dinner": "..."}, ...}
-    week_start: Optional[str] = None  # ISO date string
+    plan_data: dict = Field(..., min_length=1)  # {"Monday": {"breakfast": "...", "lunch": "...", "dinner": "..."}, ...}
+    week_start: Optional[str] = Field(None, max_length=20)  # ISO date string
 
 class WaterIntakeRequest(BaseModel):
-    glasses: int = 0
-    ml: int = 0
+    glasses: int = Field(0, ge=0, le=40)
+    ml: int = Field(0, ge=0, le=10000)
 
-    @field_validator("glasses", "ml")
-    @classmethod
-    def validate_non_negative(cls, v):
-        if v < 0:
-            raise ValueError("Water intake cannot be negative")
-        return v
+    @model_validator(mode="after")
+    def validate_some_water(self):
+        if self.glasses == 0 and self.ml == 0:
+            raise ValueError("Provide glasses or ml to log water")
+        return self
 
 class FoodSearchResult(BaseModel):
     name: str
@@ -256,6 +286,19 @@ def home():
             "auth": ["/auth/signup", "/auth/login", "/auth/me", "/auth/refresh"],
             "protected": ["/user/health-records", "/user/health-records/trend", "/user/meals", "/user/workouts", "/user/meal-plan", "/user/stats"]
         }
+    }
+
+
+@app.get("/ready")
+def readiness(db: Session = Depends(get_db)):
+    """Readiness probe that verifies app, dataset, and database access."""
+    db.execute(text("SELECT 1"))
+    return {
+        "status": "ready",
+        "database": "ok",
+        "dataset_size": len(dataset),
+        "exercise_count": len(EXERCISE_DATABASE),
+        "version": APP_VERSION,
     }
 
 
@@ -618,9 +661,17 @@ def list_exercises(
 
 
 class CalorieEstimateRequest(BaseModel):
-    exercise_name: str
-    weight_kg: float
-    duration_minutes: int
+    exercise_name: str = Field(..., min_length=1, max_length=120)
+    weight_kg: float = Field(..., ge=10, le=500)
+    duration_minutes: int = Field(..., ge=1, le=1440)
+
+    @field_validator("exercise_name")
+    @classmethod
+    def clean_exercise_name(cls, value: str) -> str:
+        value = " ".join(value.strip().split())
+        if not value:
+            raise ValueError("Exercise name is required")
+        return value
 
 
 @app.post("/exercises/calories")
@@ -702,7 +753,7 @@ _build_food_db()
 @app.get("/foods/search")
 def search_foods(q: str = Query(..., min_length=2, description="Search query"), limit: int = Query(20, ge=1, le=50)):
     """Search food items for nutrition data. Uses the recipe dataset as a real food database."""
-    query = q.lower()
+    query = q.strip().lower()
     results = [f for f in _food_nutrition_db if query in f["name"].lower()][:limit]
     return {
         "query": q,
@@ -746,25 +797,25 @@ def log_water(
         .first()
     )
     
-    total_ml = req.ml if req.ml > 0 else req.glasses * 250  # 250ml per glass
-    if total_ml == 0:
-        return {"message": "No water logged", "total_ml": 0}
+    added_ml = req.ml + req.glasses * 250  # 250ml per glass
     
     if existing:
-        existing.calories = float(existing.calories) + total_ml
-        existing.meal_name = f"{int(float(existing.calories) / 250)} glasses"
+        new_total_ml = int(float(existing.calories)) + added_ml
+        existing.calories = float(new_total_ml)
+        existing.meal_name = f"{new_total_ml // 250} glasses"
     else:
+        new_total_ml = added_ml
         water = SavedMeal(
             user_id=user.id,
-            meal_name=f"{req.glasses} glasses",
+            meal_name=f"{new_total_ml // 250} glasses",
             meal_type="water",
-            calories=float(total_ml),
+            calories=float(new_total_ml),
             protein=0, carbs=0, fat=0
         )
         db.add(water)
 
     db.commit()
-    return {"message": "Water logged", "total_ml": total_ml}
+    return {"message": "Water logged", "added_ml": added_ml, "total_ml": new_total_ml}
 
 
 @app.get("/user/water")

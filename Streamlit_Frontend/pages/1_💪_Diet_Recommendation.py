@@ -7,6 +7,8 @@ import requests
 import time
 from pathlib import Path
 from api import APIClient, BASE_URL
+from ui.polish import inject_ui_polish
+from ui.ux import handle_auth_expired, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -19,8 +21,7 @@ st.set_page_config(
 
 LOGO_PATH = Path(__file__).parent.parent / "logo.png"
 
-if not st.session_state.get("auth_token"):
-    st.switch_page("pages/0_🔐_Account.py")
+require_login("pages/1_💪_Diet_Recommendation.py")
 
 # ═══════════════════════════════════════════════════════════════
 # PREMIUM CSS
@@ -252,6 +253,16 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+inject_ui_polish()
+
+recipe_count_label = "50K+"
+try:
+    api_health = APIClient.check_health()
+    if api_health.get("connected") and api_health.get("dataset_size", 0) > 0:
+        dataset_size = api_health["dataset_size"]
+        recipe_count_label = f"{dataset_size:,}" if dataset_size < 10000 else f"{dataset_size // 1000}K+"
+except Exception:
+    pass
 
 # ═══════════════════════════════════════════════════════════════
 # SIDEBAR
@@ -268,10 +279,10 @@ with st.sidebar:
 # ═══════════════════════════════════════════════════════════════
 # PAGE HEADER
 # ═══════════════════════════════════════════════════════════════
-st.markdown("""
+st.markdown(f"""
 <div class="page-header">
     <h1 class="page-title">💪 Personalized Diet Recommendation</h1>
-    <p class="page-subtitle">AI-powered nutrition matching from 521,937 recipes</p>
+    <p class="page-subtitle">AI-powered nutrition matching from {recipe_count_label} recipes</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -422,7 +433,7 @@ with results_col:
         st.markdown(f"""
         <div style="background: #E8F5E9; padding: 14px 18px; border-radius: 10px; margin-bottom: 16px; border-left: 4px solid #4CAF50;">
             <strong style="color: #2E7D32 !important;">💡 How it works:</strong>
-            <span style="color: #333 !important;">Finding recipes matching ~{cals_per_meal} kcal/meal from 521,937 options using KNN + Cosine Similarity</span>
+            <span style="color: #333 !important;">Finding recipes matching ~{cals_per_meal} kcal/meal from {recipe_count_label} options using KNN + Cosine Similarity</span>
         </div>
         """, unsafe_allow_html=True)
         
@@ -475,10 +486,11 @@ with results_col:
                                         protein=float(pro), carbs=float(carb), fat=float(fat_val),
                                         meal_type="saved", auth_token=auth_token
                                     )
+                                    handle_auth_expired(result)
                                     if result["success"]:
                                         st.success(f"⭐ Saved: {name[:30]}")
                                     else:
-                                        st.error("Failed to save")
+                                        st.error(result.get("error", "Failed to save"))
                         with exp_col:
                             if ingredients:
                                 with st.expander(f"📜 Ingredients"):
@@ -555,4 +567,4 @@ with results_col:
         </div>
         """, unsafe_allow_html=True)
         
-        st.info("💡 **How it works:** Our ML algorithm analyzes your health profile and matches you with nutritionally optimal recipes from our database of 521,937 options.")
+        st.info(f"💡 **How it works:** Our ML algorithm analyzes your health profile and matches you with nutritionally optimal recipes from {recipe_count_label} options.")

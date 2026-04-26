@@ -15,19 +15,24 @@ import androidx.compose.material3.Shapes
 // TARG BRAND COLORS (matches web design system)
 // ═══════════════════════════════════════════
 
-val PrimaryGreen = Color(0xFF4CAF50)
-val DarkGreen = Color(0xFF2E7D32)
-val SoftMint = Color(0xFFA5D6A7)
-val LightMint = Color(0xFFC8E6C9)
-val PaleGreen = Color(0xFFE8F5E9)
+val PrimaryGreen = Color(0xFF2F7D48)
+val DarkGreen = Color(0xFF1F5F39)
+val SoftMint = Color(0xFF8BCFA2)
+val LightMint = Color(0xFFD9F0DF)
+val PaleGreen = Color(0xFFEFF8F0)
+val AccentTeal = Color(0xFF0F766E)
+val AccentBlue = Color(0xFF2563EB)
+val AccentAmber = Color(0xFFD97706)
+val AccentRose = Color(0xFFE11D48)
 
-val DarkText = Color(0xFF333333)
-val MediumText = Color(0xFF666666)
-val LightText = Color(0xFF999999)
+val DarkText = Color(0xFF243025)
+val MediumText = Color(0xFF647067)
+val LightText = Color(0xFF8C968E)
 
 val White = Color(0xFFFFFFFF)
-val OffWhite = Color(0xFFF8FFF8)
-val LightGray = Color(0xFFF5F5F5)
+val OffWhite = Color(0xFFF6F8F4)
+val LightGray = Color(0xFFF0F3EF)
+val BorderLight = Color(0xFFD8E3D6)
 
 // BMI Category Colors
 val BmiNormal = Color(0xFF4CAF50)
@@ -36,10 +41,10 @@ val BmiOverweight = Color(0xFFFF7043)
 val BmiObese = Color(0xFFEF5350)
 
 // Design tokens
-val CardRadius = 16.dp
-val ButtonRadius = 12.dp
+val CardRadius = 10.dp
+val ButtonRadius = 10.dp
 val PagePadding = 16.dp
-val CardElevation = 4.dp
+val CardElevation = 1.dp
 
 // ═══════════════════════════════════════════
 // COLOR SCHEMES
@@ -50,7 +55,7 @@ private val LightColorScheme = lightColorScheme(
     onPrimary = White,
     primaryContainer = LightMint,
     onPrimaryContainer = DarkGreen,
-    secondary = DarkGreen,
+    secondary = AccentTeal,
     onSecondary = White,
     secondaryContainer = PaleGreen,
     background = OffWhite,
@@ -68,7 +73,7 @@ private val DarkColorScheme = darkColorScheme(
     onPrimary = Color(0xFF003300),
     primaryContainer = DarkGreen,
     onPrimaryContainer = LightMint,
-    secondary = SoftMint,
+    secondary = AccentTeal,
     onSecondary = Color(0xFF003300),
     secondaryContainer = Color(0xFF1B5E20),
     background = Color(0xFF121212),
@@ -88,7 +93,7 @@ private val DarkColorScheme = darkColorScheme(
 val TargShapes = Shapes(
     small = RoundedCornerShape(8.dp),
     medium = RoundedCornerShape(CardRadius),
-    large = RoundedCornerShape(20.dp)
+    large = RoundedCornerShape(14.dp)
 )
 
 // ═══════════════════════════════════════════
@@ -151,4 +156,3 @@ fun TargTheme(
         content = content
     )
 }
-

@@ -8,10 +8,87 @@ from typing import Optional, Dict, Any, List
 
 # Backend URL — use TARG_API_URL=http://backend:8080 inside Docker Compose.
 BASE_URL = os.getenv("TARG_API_URL", "http://localhost:8080").rstrip("/")
+REQUEST_TIMEOUT = 10
+
+
+def _extract_error(response: requests.Response, default: str) -> str:
+    try:
+        detail = response.json().get("detail", default)
+        if isinstance(detail, list) and detail:
+            first = detail[0]
+            if isinstance(first, dict):
+                return first.get("msg", default)
+        if isinstance(detail, str):
+            return detail
+    except ValueError:
+        pass
+    return default
+
+
+def _auth_headers(auth_token: Optional[str] = None) -> Dict[str, str]:
+    return {"Authorization": f"Bearer {auth_token}"} if auth_token else {}
+
+
+def _protected_failure(response: requests.Response, default: str, fallback_data: Any = None) -> Dict[str, Any]:
+    if response.status_code in (401, 403):
+        return {
+            "success": False,
+            "error": "Your session expired. Please sign in again.",
+            "auth_expired": True,
+            "data": fallback_data,
+        }
+    return {"success": False, "error": _extract_error(response, default), "data": fallback_data}
 
 
 class APIClient:
     """Centralized API client for all backend calls"""
+
+    # ═══════════════════════════════════════════
+    # AUTH
+    # ═══════════════════════════════════════════
+    @staticmethod
+    def login(username: str, password: str) -> Dict[str, Any]:
+        """Login with username/email and password."""
+        try:
+            response = requests.post(
+                f"{BASE_URL}/auth/login",
+                json={"username": username.strip(), "password": password},
+                timeout=REQUEST_TIMEOUT
+            )
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            message = "Invalid username/email or password" if response.status_code == 401 else _extract_error(response, "Login failed")
+            return {"success": False, "error": message}
+        except requests.exceptions.Timeout:
+            return {"success": False, "error": "Login timed out. Please try again."}
+        except requests.exceptions.ConnectionError:
+            return {"success": False, "error": "Cannot connect to backend."}
+        except requests.exceptions.RequestException as exc:
+            return {"success": False, "error": str(exc)}
+
+    @staticmethod
+    def signup(email: str, username: str, password: str, full_name: str = "") -> Dict[str, Any]:
+        """Create a new account."""
+        try:
+            response = requests.post(
+                f"{BASE_URL}/auth/signup",
+                json={
+                    "email": email.strip(),
+                    "username": username.strip(),
+                    "password": password,
+                    "full_name": full_name.strip()
+                },
+                timeout=REQUEST_TIMEOUT
+            )
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            return {"success": False, "error": _extract_error(response, "Signup failed")}
+        except requests.exceptions.Timeout:
+            return {"success": False, "error": "Signup timed out. Please try again."}
+        except requests.exceptions.ConnectionError:
+            return {"success": False, "error": "Cannot connect to backend."}
+        except requests.exceptions.RequestException as exc:
+            return {"success": False, "error": str(exc)}
     
     # ═══════════════════════════════════════════
     # HEALTH ANALYSIS
@@ -24,14 +101,12 @@ class APIClient:
             "age": age, "height": height, "weight": weight,
             "gender": gender, "activity_level": activity_level
         }
-        headers = {}
-        if auth_token:
-            headers["Authorization"] = f"Bearer {auth_token}"
+        headers = _auth_headers(auth_token)
         try:
             response = requests.post(f"{BASE_URL}/health/", json=payload, headers=headers, timeout=10)
             if response.status_code == 200:
                 return {"success": True, "data": response.json()}
-            return {"success": False, "error": f"API Error: {response.status_code}"}
+            return _protected_failure(response, f"API Error: {response.status_code}")
         except requests.exceptions.ConnectionError:
             return {"success": False, "error": "Backend not available", "use_fallback": True}
         except Exception as e:
@@ -75,7 +150,9 @@ class APIClient:
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=5
             )
-            return {"success": response.status_code == 200, "data": response.json() if response.status_code == 200 else None}
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            return _protected_failure(response, "Could not save meal")
         except:
             return {"success": False, "error": "Connection failed"}
     
@@ -83,7 +160,7 @@ class APIClient:
     def get_saved_meals(auth_token: str, meal_type: str = None, limit: int = 20) -> Dict[str, Any]:
         """Get user's saved meals."""
         if not auth_token:
-            return {"success": False, "data": []}
+            return {"success": False, "error": "Not authenticated", "data": []}
         try:
             response = requests.get(
                 f"{BASE_URL}/user/meals",
@@ -96,7 +173,7 @@ class APIClient:
                 if meal_type:
                     meals = [m for m in meals if m.get("meal_type") == meal_type]
                 return {"success": True, "data": meals}
-            return {"success": False, "data": []}
+            return _protected_failure(response, "Could not load meals", [])
         except:
             return {"success": False, "data": []}
     
@@ -132,7 +209,9 @@ class APIClient:
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=5
             )
-            return {"success": response.status_code == 200}
+            if response.status_code == 200:
+                return {"success": True}
+            return _protected_failure(response, "Could not log workout")
         except:
             return {"success": False, "error": "Connection failed"}
     
@@ -140,7 +219,7 @@ class APIClient:
     def get_workout_history(auth_token: str, limit: int = 10) -> Dict[str, Any]:
         """Get user's workout history."""
         if not auth_token:
-            return {"success": False, "data": []}
+            return {"success": False, "error": "Not authenticated", "data": []}
         try:
             response = requests.get(
                 f"{BASE_URL}/user/workouts",
@@ -150,7 +229,7 @@ class APIClient:
             )
             if response.status_code == 200:
                 return {"success": True, "data": response.json()}
-            return {"success": False, "data": []}
+            return _protected_failure(response, "Could not load workouts", [])
         except:
             return {"success": False, "data": []}
     
@@ -169,7 +248,9 @@ class APIClient:
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=5
             )
-            return {"success": response.status_code == 200}
+            if response.status_code == 200:
+                return {"success": True}
+            return _protected_failure(response, "Could not save meal plan")
         except:
             return {"success": False, "error": "Connection failed"}
     
@@ -177,7 +258,7 @@ class APIClient:
     def get_meal_plan(auth_token: str) -> Dict[str, Any]:
         """Get the user's latest meal plan."""
         if not auth_token:
-            return {"success": False, "data": None}
+            return {"success": False, "error": "Not authenticated", "data": None}
         try:
             response = requests.get(
                 f"{BASE_URL}/user/meal-plan",
@@ -186,7 +267,7 @@ class APIClient:
             )
             if response.status_code == 200:
                 return {"success": True, "data": response.json()}
-            return {"success": False, "data": None}
+            return _protected_failure(response, "Could not load meal plan", None)
         except:
             return {"success": False, "data": None}
     
@@ -231,7 +312,7 @@ class APIClient:
     def get_health_trend(auth_token: str) -> Dict[str, Any]:
         """Get health metrics over time for charting."""
         if not auth_token:
-            return {"success": False, "data": []}
+            return {"success": False, "error": "Not authenticated", "data": []}
         try:
             response = requests.get(
                 f"{BASE_URL}/user/health-records/trend",
@@ -240,7 +321,7 @@ class APIClient:
             )
             if response.status_code == 200:
                 return {"success": True, "data": response.json().get("data", [])}
-            return {"success": False, "data": []}
+            return _protected_failure(response, "Could not load health trend", [])
         except:
             return {"success": False, "data": []}
     
@@ -251,7 +332,7 @@ class APIClient:
     def get_user_stats(auth_token: str) -> Dict[str, Any]:
         """Get aggregated user statistics."""
         if not auth_token:
-            return {"success": False, "data": {}}
+            return {"success": False, "error": "Not authenticated", "data": {}}
         try:
             response = requests.get(
                 f"{BASE_URL}/user/stats",
@@ -260,7 +341,7 @@ class APIClient:
             )
             if response.status_code == 200:
                 return {"success": True, "data": response.json()}
-            return {"success": False, "data": {}}
+            return _protected_failure(response, "Could not load stats", {})
         except:
             return {"success": False, "data": {}}
     
@@ -322,7 +403,9 @@ class APIClient:
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=5
             )
-            return {"success": response.status_code == 200, "data": response.json() if response.status_code == 200 else None}
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            return _protected_failure(response, "Could not log water")
         except:
             return {"success": False, "error": "Connection failed"}
 
@@ -330,7 +413,7 @@ class APIClient:
     def get_water(auth_token: str = None) -> Dict[str, Any]:
         """Get today's water intake."""
         if not auth_token:
-            return {"success": False, "data": {"total_ml": 0, "glasses": 0, "goal_ml": 2500, "percent": 0}}
+            return {"success": False, "error": "Not authenticated", "data": {"total_ml": 0, "glasses": 0, "goal_ml": 2500, "percent": 0}}
         try:
             response = requests.get(
                 f"{BASE_URL}/user/water",
@@ -339,7 +422,7 @@ class APIClient:
             )
             if response.status_code == 200:
                 return {"success": True, "data": response.json()}
-            return {"success": False, "data": {"total_ml": 0, "glasses": 0, "goal_ml": 2500, "percent": 0}}
+            return _protected_failure(response, "Could not load water", {"total_ml": 0, "glasses": 0, "goal_ml": 2500, "percent": 0})
         except:
             return {"success": False, "data": {"total_ml": 0, "glasses": 0, "goal_ml": 2500, "percent": 0}}
 

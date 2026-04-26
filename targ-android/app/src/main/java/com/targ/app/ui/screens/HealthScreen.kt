@@ -24,6 +24,7 @@ fun HealthScreen(viewModel: HealthViewModel) {
     val healthData by viewModel.healthData.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.errorMessage.collectAsState()
+    val actionMessage by viewModel.actionMessage.collectAsState()
     val apiStatus by viewModel.apiStatus.collectAsState()
     val recipeCount = apiStatus?.let { if (it.datasetSize >= 1000) "${it.datasetSize / 1000}K+" else "${it.datasetSize}" } ?: "375K+"
 
@@ -134,12 +135,12 @@ fun HealthScreen(viewModel: HealthViewModel) {
             )
         }
 
-        // ─── ERROR ───
+        // ─── FEEDBACK ───
+        actionMessage?.let {
+            MessageBanner(it, onDismiss = { viewModel.clearActionMessage() })
+        }
         error?.let {
-            Surface(shape = RoundedCornerShape(12.dp), color = BmiObese.copy(alpha = 0.1f),
-                modifier = Modifier.fillMaxWidth()) {
-                Text("⚠️ $it", modifier = Modifier.padding(16.dp), color = BmiObese)
-            }
+            MessageBanner(it, isError = true, onDismiss = { viewModel.clearError() })
         }
 
         // ─── RESULTS ───

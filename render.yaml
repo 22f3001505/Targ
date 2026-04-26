@@ -14,9 +14,20 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
-        value: "*"
+        value: "https://targ-web.onrender.com"
       - key: CORS_ALLOW_CREDENTIALS
         value: "false"
+
+  - type: web
+    name: targ-web
+    runtime: docker
+    dockerfilePath: ./Streamlit_Frontend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /_stcore/health
+    plan: free
+    envVars:
+      - key: TARG_API_URL
+        value: "https://targ-api.onrender.com"
 
 databases:
   - name: targ-postgres
