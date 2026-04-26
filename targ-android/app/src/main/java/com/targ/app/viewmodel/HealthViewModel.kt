@@ -209,6 +209,21 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
         _actionMessage.value = null
     }
 
+    private fun handleRepositoryFailure(error: Throwable, useActionMessage: Boolean = false) {
+        val message = error.message ?: "Something went wrong"
+        if (message == HealthRepository.SESSION_EXPIRED_MESSAGE) {
+            clearStoredSession()
+            _errorMessage.value = message
+            return
+        }
+
+        if (useActionMessage) {
+            _actionMessage.value = message
+        } else {
+            _errorMessage.value = message
+        }
+    }
+
     fun login(username: String, password: String) {
         viewModelScope.launch {
             try {
@@ -276,6 +291,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val result = repository.getUserStats(token)
                 result.onSuccess { _userStats.value = it }
+                result.onFailure { handleRepositoryFailure(it) }
             } catch (e: Exception) {
                 Log.e("TARG", "Fetch stats failed", e)
             }
@@ -288,6 +304,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 repository.getSavedMeals(token, limit)
                     .onSuccess { _savedMeals.value = it }
+                    .onFailure { handleRepositoryFailure(it) }
             } catch (e: Exception) {
                 Log.e("TARG", "Load meals failed", e)
             }
@@ -312,7 +329,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                         _actionMessage.value = "Health analysis saved"
                     }
                 }
-                result.onFailure { _errorMessage.value = it.message }
+                result.onFailure { handleRepositoryFailure(it) }
             } catch (e: Exception) {
                 _errorMessage.value = "Analysis error: ${e.message}"
             } finally {
@@ -396,7 +413,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                         loadSavedMeals()
                         fetchUserStats()
                     }
-                    .onFailure { _errorMessage.value = it.message }
+                    .onFailure { handleRepositoryFailure(it) }
             } catch (e: Exception) {
                 Log.e("TARG", "Save meal failed", e)
                 _errorMessage.value = "Meal sync failed: ${e.message}"
@@ -417,7 +434,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                         loadSavedMeals()
                         fetchUserStats()
                     }
-                    .onFailure { _errorMessage.value = it.message }
+                    .onFailure { handleRepositoryFailure(it) }
             } catch (e: Exception) {
                 Log.e("TARG", "Clear meals failed", e)
                 _errorMessage.value = "Meal clear failed: ${e.message}"
@@ -437,7 +454,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                         _actionMessage.value = "Workout logged"
                         fetchUserStats()
                     }
-                    .onFailure { _errorMessage.value = it.message }
+                    .onFailure { handleRepositoryFailure(it) }
             } catch (e: Exception) {
                 Log.e("TARG", "Log workout failed", e)
                 _errorMessage.value = "Workout log failed: ${e.message}"
@@ -455,7 +472,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                 _isFoodLoading.value = true
                 repository.searchFoods(query, limit)
                     .onSuccess { _foodResults.value = it }
-                    .onFailure { _errorMessage.value = it.message }
+                    .onFailure { handleRepositoryFailure(it) }
             } catch (e: Exception) {
                 _errorMessage.value = "Food search error: ${e.message}"
             } finally {
@@ -490,7 +507,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                         _waterData.value = it
                         _actionMessage.value = "Water updated"
                     }
-                    .onFailure { _errorMessage.value = it.message }
+                    .onFailure { handleRepositoryFailure(it) }
             } catch (e: Exception) {
                 Log.e("TARG", "Log water failed", e)
                 _errorMessage.value = "Water sync failed: ${e.message}"
@@ -504,6 +521,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 repository.getWater(token)
                     .onSuccess { _waterData.value = it }
+                    .onFailure { handleRepositoryFailure(it) }
             } catch (e: Exception) {
                 Log.e("TARG", "Load water failed", e)
             }
@@ -522,7 +540,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                         _actionMessage.value = "Meal plan saved"
                         loadMealPlan()
                     }
-                    .onFailure { _actionMessage.value = it.message }
+                    .onFailure { handleRepositoryFailure(it, useActionMessage = true) }
             } catch (e: Exception) {
                 _actionMessage.value = "Meal plan error: ${e.message}"
             }
@@ -535,6 +553,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 repository.getMealPlan(token)
                     .onSuccess { _mealPlan.value = it }
+                    .onFailure { handleRepositoryFailure(it) }
             } catch (e: Exception) {
                 Log.e("TARG", "Load meal plan failed", e)
             }

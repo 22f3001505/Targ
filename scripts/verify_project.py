@@ -75,12 +75,18 @@ def main() -> int:
         response = client.post("/auth/login", json={"username": "verify@example.com", "password": "secret123"})
         assert_status(response)
 
+        response = client.post("/auth/login", json={"username": "verify@example.com", "password": "wrong-password"})
+        assert_status(response, 401)
+
         response = client.post("/auth/refresh", headers=headers)
         assert_status(response)
 
         response = client.get("/auth/me", headers=headers)
         assert_status(response)
         assert response.json()["username"] == "verify"
+
+        response = client.get("/user/stats", headers={"Authorization": "Bearer not-a-real-token"})
+        assert_status(response, 401)
 
         response = client.post(
             "/health/",

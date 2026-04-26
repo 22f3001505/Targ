@@ -178,19 +178,25 @@ class APIClient:
             return {"success": False, "data": []}
     
     @staticmethod
-    def clear_tracked_meals(auth_token: str) -> bool:
+    def clear_tracked_meals(auth_token: str) -> Dict[str, Any]:
         """Clear today's tracked meals."""
         if not auth_token:
-            return False
+            return {"success": False, "error": "Not authenticated"}
         try:
             response = requests.delete(
                 f"{BASE_URL}/user/meals/clear",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=5
             )
-            return response.status_code == 200
-        except:
-            return False
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            return _protected_failure(response, "Could not clear meals")
+        except requests.exceptions.Timeout:
+            return {"success": False, "error": "Clear meals timed out. Please try again."}
+        except requests.exceptions.ConnectionError:
+            return {"success": False, "error": "Cannot connect to backend."}
+        except requests.exceptions.RequestException as exc:
+            return {"success": False, "error": str(exc)}
     
     # ═══════════════════════════════════════════
     # WORKOUT LOGS
@@ -349,19 +355,25 @@ class APIClient:
     # DELETE MEAL
     # ═══════════════════════════════════════════
     @staticmethod
-    def delete_meal(meal_id: int, auth_token: str) -> bool:
+    def delete_meal(meal_id: int, auth_token: str) -> Dict[str, Any]:
         """Delete a saved meal by ID."""
         if not auth_token:
-            return False
+            return {"success": False, "error": "Not authenticated"}
         try:
             response = requests.delete(
                 f"{BASE_URL}/user/meals/{meal_id}",
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=5
             )
-            return response.status_code == 200
-        except:
-            return False
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            return _protected_failure(response, "Could not delete meal")
+        except requests.exceptions.Timeout:
+            return {"success": False, "error": "Delete meal timed out. Please try again."}
+        except requests.exceptions.ConnectionError:
+            return {"success": False, "error": "Cannot connect to backend."}
+        except requests.exceptions.RequestException as exc:
+            return {"success": False, "error": str(exc)}
     
     # ═══════════════════════════════════════════
     # FOOD NUTRITION SEARCH (v7.0)

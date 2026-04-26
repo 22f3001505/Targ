@@ -536,7 +536,11 @@ with right_col:
                 if st.button("Yes, clear meals", use_container_width=True):
                     auth_token = st.session_state.get('auth_token')
                     if auth_token:
-                        APIClient.clear_tracked_meals(auth_token)
+                        clear_result = APIClient.clear_tracked_meals(auth_token)
+                        handle_auth_expired(clear_result)
+                        if not clear_result.get("success"):
+                            st.error(clear_result.get("error", "Could not clear meals. Please try again."))
+                            st.stop()
                     st.session_state.meals_logged = []
                     st.session_state.totals = {"calories": 0, "protein": 0, "carbs": 0, "fat": 0}
                     st.session_state.confirm_clear_meals = False
