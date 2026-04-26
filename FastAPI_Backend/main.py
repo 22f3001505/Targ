@@ -36,7 +36,7 @@ from exercises_db import (
 # ═══════════════════════════════════════════════════
 # DATASET (memory-optimized for Render free tier 512MB)
 # ═══════════════════════════════════════════════════
-APP_VERSION = "7.2.2"
+APP_VERSION = "7.2.3"
 DATASET_DIR = Path(__file__).resolve().parent.parent / "Data"
 DATASET_LITE = DATASET_DIR / "dataset_lite.csv"
 DATASET_FULL = DATASET_DIR / "dataset.csv"
@@ -455,16 +455,18 @@ def save_meal(
 def get_saved_meals(
     user: User = Depends(require_auth),
     db: Session = Depends(get_db),
-    limit: int = Query(20, ge=1, le=100)
+    limit: int = Query(20, ge=1, le=100),
+    include_water: bool = Query(False, description="Include internal water tracker rows")
 ):
     """Get user's saved meals."""
-    meals = (
+    query = (
         db.query(SavedMeal)
         .filter(SavedMeal.user_id == user.id)
-        .order_by(SavedMeal.saved_at.desc())
-        .limit(limit)
-        .all()
     )
+    if not include_water:
+        query = query.filter(SavedMeal.meal_type != "water")
+
+    meals = query.order_by(SavedMeal.saved_at.desc()).limit(limit).all()
     return [{
         "id": m.id,
         "meal_name": m.meal_name,
@@ -474,7 +476,8 @@ def get_saved_meals(
         "carbs": m.carbs,
         "fat": m.fat,
         "fiber": m.fiber,
-        "saved_at": str(m.saved_at)
+        "saved_at": str(m.saved_at),
+        "created_at": str(m.saved_at)
     } for m in meals]
 
 
@@ -570,7 +573,11 @@ def get_user_stats(
 ):
     """Get aggregated user statistics."""
     health_count = db.query(HealthRecord).filter(HealthRecord.user_id == user.id).count()
-    meal_count = db.query(SavedMeal).filter(SavedMeal.user_id == user.id).count()
+    meal_count = (
+        db.query(SavedMeal)
+        .filter(SavedMeal.user_id == user.id, SavedMeal.meal_type != "water")
+        .count()
+    )
     workout_count = db.query(WorkoutLog).filter(WorkoutLog.user_id == user.id).count()
 
     latest_health = (

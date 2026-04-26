@@ -4,7 +4,7 @@
 
 **Targeted AI-based Recipe Generator**
 
-[![Version](https://img.shields.io/badge/version-7.2.2-green)]()
+[![Version](https://img.shields.io/badge/version-7.2.3-green)]()
 [![Python](https://img.shields.io/badge/Python-3.10+-blue)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.10-purple)]()
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-teal)]()
@@ -141,7 +141,7 @@ TARG is a **production-grade health intelligence system** — 3 platforms, 9,108
 │             API LAYER — FastAPI (Port 8080)                │
 │                        │                                  │
 │   ┌────────────────────▼────────────────────────────┐     │
-│   │           FastAPI v7.2.2  (1,536+ LOC)          │     │
+│   │           FastAPI v7.2.3  (1,536+ LOC)          │     │
 │   │           25 REST Endpoints + CORS              │     │
 │   │                                                 │     │
 │   │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │     │
@@ -390,4 +390,4 @@ cd targ-android && ./gradlew assembleDebug
 
 ---
 
-**v7.2.2** | 35+ files | 9,108+ LOC | 25 endpoints | 375K source recipes | 198 exercises | April 2026
+**v7.2.3** | 35+ files | 9,108+ LOC | 25 endpoints | 375K source recipes | 198 exercises | April 2026

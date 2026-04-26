@@ -265,7 +265,7 @@ if st.session_state.auth_token:
             m_pro = round(meal.get('protein', 0), 1)
             m_carb = round(meal.get('carbs', 0), 1)
             m_fat = round(meal.get('fat', 0), 1)
-            m_date = str(meal.get('created_at', ''))[:10]
+            m_date = str(meal.get('saved_at') or meal.get('created_at', ''))[:10]
             
             st.markdown(f"""
             <div style="background: #FFFFFF; border: 1px solid rgba(76,175,80,0.15); border-radius: 12px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #4CAF50;">

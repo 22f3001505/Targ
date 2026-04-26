@@ -117,7 +117,11 @@ def main() -> int:
 
         response = client.get("/user/meals", headers=headers)
         assert_status(response)
-        assert any(meal["meal_name"] == "Verify Meal" for meal in response.json())
+        meals = response.json()
+        verify_meal = next((meal for meal in meals if meal["meal_name"] == "Verify Meal"), None)
+        assert verify_meal
+        assert verify_meal["saved_at"]
+        assert verify_meal["created_at"] == verify_meal["saved_at"]
 
         response = client.get("/user/stats", headers=headers)
         assert_status(response)
@@ -156,6 +160,14 @@ def main() -> int:
         response = client.get("/user/water", headers=headers)
         assert_status(response)
         assert response.json()["glasses"] == 2
+
+        response = client.get("/user/meals", headers=headers)
+        assert_status(response)
+        assert all(meal["meal_type"] != "water" for meal in response.json())
+
+        response = client.get("/user/stats", headers=headers)
+        assert_status(response)
+        assert response.json()["total_saved_meals"] == 0
 
         response = client.post("/user/water", headers=headers, json={"glasses": 0, "ml": 0})
         assert_status(response, 422)
