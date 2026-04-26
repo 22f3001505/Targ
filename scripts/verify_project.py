@@ -90,6 +90,13 @@ def main() -> int:
 
         response = client.post(
             "/health/",
+            headers={"Authorization": "Bearer not-a-real-token"},
+            json={"age": 31, "height": 172, "weight": 74, "gender": "male", "activity_level": "moderate"},
+        )
+        assert_status(response, 401)
+
+        response = client.post(
+            "/health/",
             headers=headers,
             json={"age": 31, "height": 172, "weight": 74, "gender": "male", "activity_level": "moderate"},
         )

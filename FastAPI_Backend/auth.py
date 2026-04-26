@@ -139,21 +139,37 @@ def get_current_user(
     db: Session = Depends(get_db)
 ) -> Optional[User]:
     """
-    Dependency: extracts and validates the JWT token.
-    Returns the User object or None if no/invalid token.
+    Optional auth dependency.
+    Returns None only when no token was sent; invalid tokens are rejected so
+    public endpoints with auto-save cannot silently drop user data.
     """
     if not token:
         return None
 
     payload = decode_token(token)
     if not payload:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
 
     user_id = token_user_id(payload)
     if not user_id:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token subject",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
 
     user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User no longer exists",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
     return user
 
 
