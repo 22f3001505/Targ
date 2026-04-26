@@ -29,6 +29,9 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
     private val _apiStatus = MutableStateFlow<HealthCheckResponse?>(null)
     val apiStatus: StateFlow<HealthCheckResponse?> = _apiStatus
 
+    private val _sessionReady = MutableStateFlow(false)
+    val sessionReady: StateFlow<Boolean> = _sessionReady
+
     init {
         checkApiStatus()
         restoreSession()
@@ -144,7 +147,10 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 val prefs = dataStore.data.first()
-                val token = prefs[SessionKeys.TOKEN] ?: return@launch
+                val token = prefs[SessionKeys.TOKEN] ?: run {
+                    _sessionReady.value = true
+                    return@launch
+                }
                 _authToken.value = token
                 _userData.value = UserData(
                     id = prefs[SessionKeys.USER_ID] ?: 0,
@@ -166,6 +172,8 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                     }
             } catch (e: Exception) {
                 Log.e("TARG", "Session restore failed", e)
+            } finally {
+                _sessionReady.value = true
             }
         }
     }

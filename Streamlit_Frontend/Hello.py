@@ -24,6 +24,9 @@ st.set_page_config(
 # Logo path
 LOGO_PATH = Path(__file__).parent / "logo.png"
 
+if not st.session_state.get("auth_token"):
+    st.switch_page("pages/0_🔐_Account.py")
+
 # ═══════════════════════════════════════════════════════════════
 # PREMIUM CSS - HEALTHCARE GRADE DESIGN
 # ═══════════════════════════════════════════════════════════════

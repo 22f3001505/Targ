@@ -7,7 +7,7 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 from typing import Annotated, Any, List, Optional
-from datetime import datetime, date
+from datetime import datetime
 from pathlib import Path
 import os
 import pandas as pd
@@ -441,7 +441,7 @@ def clear_meals(
     db: Session = Depends(get_db)
 ):
     """Clear all tracked meals for the user (today's macro tracker reset)."""
-    today_start = datetime.combine(date.today(), datetime.min.time())
+    today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
     deleted = (
         db.query(SavedMeal)
         .filter(
@@ -733,7 +733,7 @@ def log_water(
 ):
     """Log water intake for today."""
     # Store as a special meal type for simplicity
-    today_start = datetime.combine(date.today(), datetime.min.time())
+    today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
     
     # Check if there's already a water entry today
     existing = (
@@ -773,7 +773,7 @@ def get_water(
     db: Session = Depends(get_db)
 ):
     """Get today's water intake."""
-    today_start = datetime.combine(date.today(), datetime.min.time())
+    today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
     entry = (
         db.query(SavedMeal)
         .filter(

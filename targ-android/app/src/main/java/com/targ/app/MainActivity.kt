@@ -81,6 +81,24 @@ fun TargApp() {
 private fun MainContent() {
     val navController = rememberNavController()
     val viewModel: HealthViewModel = viewModel()
+    val sessionReady by viewModel.sessionReady.collectAsState()
+    val authToken by viewModel.authToken.collectAsState()
+
+    if (!sessionReady) {
+        LaunchLoadingScreen()
+        return
+    }
+
+    if (authToken == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(OffWhite)
+        ) {
+            AccountScreen(viewModel)
+        }
+        return
+    }
 
     Scaffold(
         bottomBar = {
@@ -148,6 +166,25 @@ private fun MainContent() {
                 composable(Screen.Recipes.route) { DietScreen(viewModel) }
                 composable(Screen.Planner.route) { PlannerScreen(viewModel) }
             }
+        }
+    }
+}
+
+@Composable
+private fun LaunchLoadingScreen() {
+    Surface(modifier = Modifier.fillMaxSize(), color = OffWhite) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("🥗", fontSize = 64.sp)
+            Spacer(Modifier.height(16.dp))
+            Text("TARG", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+            Spacer(Modifier.height(14.dp))
+            CircularProgressIndicator(color = PrimaryGreen, strokeWidth = 3.dp)
+            Spacer(Modifier.height(12.dp))
+            Text("Checking your session...", fontSize = 13.sp, color = MediumText)
         }
     }
 }

@@ -320,7 +320,7 @@ else:
                             st.session_state.auth_token = data["access_token"]
                             st.session_state.user_data = data["user"]
                             st.success("✅ Login successful!")
-                            st.rerun()
+                            st.switch_page("Hello.py")
                         elif response.status_code == 401:
                             st.error("❌ Invalid username/email or password")
                         else:
@@ -371,7 +371,7 @@ else:
                             st.session_state.user_data = data["user"]
                             st.success("✅ Account created!")
                             st.balloons()
-                            st.rerun()
+                            st.switch_page("Hello.py")
                         else:
                             st.error(f"Error: {response.json().get('detail', 'Unknown error')}")
                     except requests.exceptions.ConnectionError:

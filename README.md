@@ -4,7 +4,7 @@
 
 **Targeted AI-based Recipe Generator**
 
-[![Version](https://img.shields.io/badge/version-7.0.0-green)]()
+[![Version](https://img.shields.io/badge/version-7.1.0-green)]()
 [![Python](https://img.shields.io/badge/Python-3.10+-blue)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.10-purple)]()
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-teal)]()
@@ -34,7 +34,7 @@
 
 ## 🎯 Overview
 
-TARG is a **production-grade health intelligence system** — 3 platforms, 9,108 lines of code, 24 API endpoints, trained on 375K+ real recipes.
+TARG is a **production-grade health intelligence system** — 3 platforms, 9,108+ lines of code, 24 API endpoints, with a 375K+ recipe source dataset and a Render-friendly lite runtime index.
 
 | Metric | Value |
 |--------|-------|
@@ -44,7 +44,7 @@ TARG is a **production-grade health intelligence system** — 3 platforms, 9,108
 | **Web Frontend** | 12 Python files · 4,516 LOC |
 | **Android App** | 16 Kotlin files · 3,056 LOC |
 | **API Endpoints** | 24 RESTful |
-| **Recipe Dataset** | 375,703 real-world recipes |
+| **Recipe Dataset** | 375,703 source recipes · 50K lite runtime sample |
 | **Exercise Database** | 198 exercises with MET values |
 | **Database Tables** | 5 |
 
@@ -141,7 +141,7 @@ TARG is a **production-grade health intelligence system** — 3 platforms, 9,108
 │             API LAYER — FastAPI (Port 8080)                │
 │                        │                                  │
 │   ┌────────────────────▼────────────────────────────┐     │
-│   │           FastAPI v7.0.0  (1,536 LOC)           │     │
+│   │           FastAPI v7.1.0  (1,536+ LOC)          │     │
 │   │           24 REST Endpoints + CORS              │     │
 │   │                                                 │     │
 │   │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │     │
@@ -177,7 +177,8 @@ Targ/
 ├── 📓 targ-recommendation-system.ipynb    # ML research notebook
 │
 ├── 📂 Data/
-│   └── 📄 dataset.csv                     # 375K+ recipe dataset (gzip)
+│   ├── 📄 dataset.csv                     # 375K+ source recipe dataset (gzip)
+│   └── 📄 dataset_lite.csv                # 50K runtime sample for memory-limited deploys
 │
 ├── 📂 FastAPI_Backend/               [1,536 LOC | 6 files]
 │   ├── 📄 main.py                (730L)  # 24 API endpoints + schemas
@@ -389,4 +390,4 @@ cd targ-android && ./gradlew assembleDebug
 
 ---
 
-**v7.0.0** | 35 files | 9,108+ LOC | 24 endpoints | 375K recipes | 198 exercises | April 2026
+**v7.1.0** | 35+ files | 9,108+ LOC | 24 endpoints | 375K source recipes | 198 exercises | April 2026

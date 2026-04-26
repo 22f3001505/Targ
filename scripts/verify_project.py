@@ -35,8 +35,8 @@ def main() -> int:
         response = client.get("/")
         assert_status(response)
         root = response.json()
-        assert root["version"] == "7.0.0"
-        assert root["dataset_size"] > 300_000
+        assert root["version"].startswith("7.")
+        assert root["dataset_size"] > 0
 
         response = client.post(
             "/health/",

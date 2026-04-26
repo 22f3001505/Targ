@@ -21,6 +21,9 @@ st.set_page_config(
 
 LOGO_PATH = Path(__file__).parent.parent / "logo.png"
 
+if not st.session_state.get("auth_token"):
+    st.switch_page("pages/0_🔐_Account.py")
+
 # ═══════════════════════════════════════════════════════════════
 # PREMIUM CSS
 # ═══════════════════════════════════════════════════════════════
@@ -653,4 +656,3 @@ with w3:
         if auth_token:
             APIClient.log_water(glasses=2, auth_token=auth_token)
         st.rerun()
-
