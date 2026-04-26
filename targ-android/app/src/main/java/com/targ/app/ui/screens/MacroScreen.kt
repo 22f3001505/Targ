@@ -61,7 +61,6 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
 
     // ─── Water tracker ───
     var waterGlasses by remember { mutableIntStateOf(0) }
-    val waterGoal = 8
 
     // ─── Backend-powered food search ───
     var foodQuery by remember { mutableStateOf("") }
@@ -76,6 +75,7 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
     val foodResults = foodResultsState?.value ?: emptyList()
     val popularFoods = popularFoodsState?.value ?: emptyList()
     val waterData = waterDataState?.value
+    val waterGoal = (waterData?.goalMl?.div(250) ?: 10).coerceAtLeast(1)
     val isFoodLoading = isFoodLoadingState?.value ?: false
     val actionMessage = actionMessageState?.value
     val errorMessage = errorMessageState?.value
@@ -226,7 +226,7 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
         // ─── 💧 WATER TRACKER ───
         TargCard {
             CardTitle("💧 Water Intake", "")
-            Text("Goal: $waterGoal glasses (2L)", fontSize = 13.sp, color = MediumText)
+            Text("Goal: $waterGoal glasses (${waterGoal * 250}ml)", fontSize = 13.sp, color = MediumText)
             Spacer(Modifier.height(12.dp))
 
             // Water glass visualization
@@ -240,9 +240,8 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
                         shape = RoundedCornerShape(10.dp),
                         color = if (isFilled) PrimaryGreen.copy(alpha = 0.8f) else PaleGreen,
                         onClick = {
-                            val diff = i - waterGlasses
                             waterGlasses = i
-                            if (diff > 0) viewModel?.logWater(glasses = diff)
+                            viewModel?.setWater(glasses = i)
                         },
                         modifier = Modifier.weight(1f).height(48.dp)
                     ) {
@@ -269,15 +268,24 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(
                         shape = RoundedCornerShape(8.dp), color = PaleGreen,
-                        onClick = { if (waterGlasses > 0) waterGlasses-- }
+                        onClick = {
+                            if (waterGlasses > 0) {
+                                val next = waterGlasses - 1
+                                waterGlasses = next
+                                viewModel?.setWater(glasses = next)
+                            }
+                        }
                     ) {
                         Text("➖", modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                     }
                     Surface(
                         shape = RoundedCornerShape(8.dp), color = PrimaryGreen,
                         onClick = {
-                            if (waterGlasses < 15) waterGlasses++
-                            viewModel?.logWater(glasses = 1)
+                            if (waterGlasses < 40) {
+                                val next = waterGlasses + 1
+                                waterGlasses = next
+                                viewModel?.setWater(glasses = next)
+                            }
                         }
                     ) {
                         Text("➕", modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))

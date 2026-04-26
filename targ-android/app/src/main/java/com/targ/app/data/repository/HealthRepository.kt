@@ -284,6 +284,19 @@ class HealthRepository {
         }
     }
 
+    suspend fun setWater(token: String, glasses: Int = 0, ml: Int = 0): Result<WaterIntakeResponse> {
+        return try {
+            val response = api.setWater("Bearer $token", WaterIntakeRequest(glasses, ml))
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(protectedError(response.code(), "Water update failed", response.errorBody()?.string()))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Cannot connect: ${e.message}"))
+        }
+    }
+
     suspend fun getWater(token: String): Result<WaterIntakeResponse> {
         return try {
             val response = api.getWater("Bearer $token")

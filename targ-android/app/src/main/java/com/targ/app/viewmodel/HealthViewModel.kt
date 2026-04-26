@@ -536,6 +536,26 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun setWater(glasses: Int = 0, ml: Int = 0) {
+        val token = _authToken.value ?: run {
+            _actionMessage.value = "Login to sync water"
+            return
+        }
+        viewModelScope.launch {
+            try {
+                repository.setWater(token, glasses, ml)
+                    .onSuccess {
+                        _waterData.value = it
+                        _actionMessage.value = "Water updated"
+                    }
+                    .onFailure { handleRepositoryFailure(it) }
+            } catch (e: Exception) {
+                Log.e("TARG", "Set water failed", e)
+                _errorMessage.value = "Water sync failed: ${e.message}"
+            }
+        }
+    }
+
     fun loadWater() {
         val token = _authToken.value ?: return
         viewModelScope.launch {

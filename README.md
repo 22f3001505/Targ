@@ -4,7 +4,7 @@
 
 **Targeted AI-based Recipe Generator**
 
-[![Version](https://img.shields.io/badge/version-7.2.7-green)]()
+[![Version](https://img.shields.io/badge/version-7.2.8-green)]()
 [![Python](https://img.shields.io/badge/Python-3.10+-blue)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.10-purple)]()
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-teal)]()
@@ -43,7 +43,7 @@ TARG is a **production-grade health intelligence system** — 3 platforms, 9,108
 | **Backend** | 6 Python files · 1,536 LOC |
 | **Web Frontend** | 12 Python files · 4,516 LOC |
 | **Android App** | 16 Kotlin files · 3,056 LOC |
-| **API Endpoints** | 25 RESTful |
+| **API Endpoints** | 26 RESTful |
 | **Recipe Dataset** | 375,703 source recipes · 50K lite runtime sample |
 | **Exercise Database** | 198 exercises with MET values |
 | **Database Tables** | 5 |
@@ -57,7 +57,7 @@ TARG is a **production-grade health intelligence system** — 3 platforms, 9,108
 | Technology | Version | What It Is | How TARG Uses It |
 |------------|---------|-----------|------------------|
 | **Python** | 3.10+ | Programming language | Runtime for entire backend |
-| **FastAPI** | ≥0.115 | Async web framework | 25 REST API endpoints with auto OpenAPI docs, request validation, dependency injection |
+| **FastAPI** | ≥0.115 | Async web framework | 26 REST API endpoints with auto OpenAPI docs, request validation, dependency injection |
 | **Uvicorn** | ≥0.30 | ASGI server | Runs FastAPI on port 8080, handles HTTP with async I/O |
 | **Pydantic** | ≥2.10 | Data validation | Validates ALL request bodies — nutrition arrays, health inputs, auth forms |
 | **Scikit-learn** | ≥1.5 | Machine Learning | KNN with cosine similarity for recipe matching, StandardScaler for normalization |
@@ -141,8 +141,8 @@ TARG is a **production-grade health intelligence system** — 3 platforms, 9,108
 │             API LAYER — FastAPI (Port 8080)                │
 │                        │                                  │
 │   ┌────────────────────▼────────────────────────────┐     │
-│   │           FastAPI v7.2.7  (1,536+ LOC)          │     │
-│   │           25 REST Endpoints + CORS              │     │
+│   │           FastAPI v7.2.8  (1,536+ LOC)          │     │
+│   │           26 REST Endpoints + CORS              │     │
 │   │                                                 │     │
 │   │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │     │
 │   │  │  Auth    │  │  Health  │  │  ML Engine   │  │     │
@@ -265,6 +265,7 @@ GET  /user/workouts              Get workout history
 POST /user/meal-plan             Save weekly meal plan
 GET  /user/meal-plan             Get current meal plan
 POST /user/water                 Log water intake (v7)
+PUT  /user/water                 Set/reset today's water intake (v7)
 GET  /user/water                 Get today's water (v7)
 ```
 
@@ -390,4 +391,4 @@ cd targ-android && ./gradlew assembleDebug
 
 ---
 
-**v7.2.7** | 35+ files | 9,108+ LOC | 25 endpoints | 375K source recipes | 198 exercises | April 2026
+**v7.2.8** | 35+ files | 9,108+ LOC | 26 endpoints | 375K source recipes | 198 exercises | April 2026

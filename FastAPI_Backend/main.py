@@ -36,10 +36,12 @@ from exercises_db import (
 # ═══════════════════════════════════════════════════
 # DATASET (memory-optimized for Render free tier 512MB)
 # ═══════════════════════════════════════════════════
-APP_VERSION = "7.2.7"
+APP_VERSION = "7.2.8"
 DATASET_DIR = Path(__file__).resolve().parent.parent / "Data"
 DATASET_LITE = DATASET_DIR / "dataset_lite.csv"
 DATASET_FULL = DATASET_DIR / "dataset.csv"
+WATER_GLASS_ML = 250
+WATER_GOAL_ML = 2500
 MEAL_PLAN_DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 MEAL_PLAN_DAY_ALIASES = {
     "mon": "Monday",
@@ -329,6 +331,10 @@ class WaterIntakeRequest(BaseModel):
             raise ValueError("Provide glasses or ml to log water")
         return self
 
+class SetWaterIntakeRequest(BaseModel):
+    glasses: int = Field(0, ge=0, le=40)
+    ml: int = Field(0, ge=0, le=10000)
+
 class FoodSearchResult(BaseModel):
     name: str
     calories: float = 0
@@ -354,7 +360,7 @@ def home():
         "endpoints": {
             "public": ["/", "/health/", "/predict/", "/exercises", "/exercises/calories", "/foods/search"],
             "auth": ["/auth/signup", "/auth/login", "/auth/me", "/auth/refresh"],
-            "protected": ["/user/health-records", "/user/health-records/trend", "/user/meals", "/user/workouts", "/user/meal-plan", "/user/stats"]
+            "protected": ["/user/health-records", "/user/health-records/trend", "/user/meals", "/user/workouts", "/user/meal-plan", "/user/water", "/user/stats"]
         }
     }
 
@@ -853,6 +859,57 @@ def popular_foods(limit: int = Query(30, ge=1, le=50)):
 # WATER INTAKE (v7.0)
 # ═══════════════════════════════════════════════════
 
+def _water_today_start() -> datetime:
+    return datetime.combine(datetime.utcnow().date(), datetime.min.time())
+
+
+def _water_entry(user: User, db: Session) -> Optional[SavedMeal]:
+    return (
+        db.query(SavedMeal)
+        .filter(
+            SavedMeal.user_id == user.id,
+            SavedMeal.meal_type == "water",
+            SavedMeal.saved_at >= _water_today_start()
+        )
+        .first()
+    )
+
+
+def _water_response(total_ml: int) -> dict:
+    return {
+        "total_ml": total_ml,
+        "glasses": total_ml // WATER_GLASS_ML,
+        "goal_ml": WATER_GOAL_ML,
+        "percent": min(100, round(total_ml / WATER_GOAL_ML * 100))
+    }
+
+
+def _set_water_total(user: User, db: Session, total_ml: int) -> dict:
+    total_ml = max(0, total_ml)
+    existing = _water_entry(user, db)
+    if total_ml == 0:
+        if existing:
+            db.delete(existing)
+        db.commit()
+        return {"message": "Water reset", **_water_response(0)}
+
+    if existing:
+        existing.calories = float(total_ml)
+        existing.meal_name = f"{total_ml // WATER_GLASS_ML} glasses"
+    else:
+        water = SavedMeal(
+            user_id=user.id,
+            meal_name=f"{total_ml // WATER_GLASS_ML} glasses",
+            meal_type="water",
+            calories=float(total_ml),
+            protein=0, carbs=0, fat=0
+        )
+        db.add(water)
+
+    db.commit()
+    return {"message": "Water updated", **_water_response(total_ml)}
+
+
 @app.post("/user/water")
 def log_water(
     req: WaterIntakeRequest,
@@ -860,39 +917,22 @@ def log_water(
     db: Session = Depends(get_db)
 ):
     """Log water intake for today."""
-    # Store as a special meal type for simplicity
-    today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
-    
-    # Check if there's already a water entry today
-    existing = (
-        db.query(SavedMeal)
-        .filter(
-            SavedMeal.user_id == user.id,
-            SavedMeal.meal_type == "water",
-            SavedMeal.saved_at >= today_start
-        )
-        .first()
-    )
-    
-    added_ml = req.ml + req.glasses * 250  # 250ml per glass
-    
-    if existing:
-        new_total_ml = int(float(existing.calories)) + added_ml
-        existing.calories = float(new_total_ml)
-        existing.meal_name = f"{new_total_ml // 250} glasses"
-    else:
-        new_total_ml = added_ml
-        water = SavedMeal(
-            user_id=user.id,
-            meal_name=f"{new_total_ml // 250} glasses",
-            meal_type="water",
-            calories=float(new_total_ml),
-            protein=0, carbs=0, fat=0
-        )
-        db.add(water)
+    existing = _water_entry(user, db)
+    current_ml = int(float(existing.calories)) if existing else 0
+    added_ml = req.ml + req.glasses * WATER_GLASS_ML
+    response = _set_water_total(user, db, current_ml + added_ml)
+    return {**response, "message": "Water logged", "added_ml": added_ml}
 
-    db.commit()
-    return {"message": "Water logged", "added_ml": added_ml, "total_ml": new_total_ml}
+
+@app.put("/user/water")
+def set_water(
+    req: SetWaterIntakeRequest,
+    user: User = Depends(require_auth),
+    db: Session = Depends(get_db)
+):
+    """Set today's water intake exactly. Allows decrement/reset sync from clients."""
+    total_ml = req.ml + req.glasses * WATER_GLASS_ML
+    return _set_water_total(user, db, total_ml)
 
 
 @app.get("/user/water")
@@ -901,20 +941,6 @@ def get_water(
     db: Session = Depends(get_db)
 ):
     """Get today's water intake."""
-    today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
-    entry = (
-        db.query(SavedMeal)
-        .filter(
-            SavedMeal.user_id == user.id,
-            SavedMeal.meal_type == "water",
-            SavedMeal.saved_at >= today_start
-        )
-        .first()
-    )
+    entry = _water_entry(user, db)
     total_ml = int(float(entry.calories)) if entry else 0
-    return {
-        "total_ml": total_ml,
-        "glasses": total_ml // 250,
-        "goal_ml": 2500,
-        "percent": min(100, round(total_ml / 2500 * 100))
-    }
+    return _water_response(total_ml)

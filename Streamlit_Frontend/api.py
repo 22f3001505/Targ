@@ -422,6 +422,24 @@ class APIClient:
             return {"success": False, "error": "Connection failed"}
 
     @staticmethod
+    def set_water(glasses: int = 0, ml: int = 0, auth_token: str = None) -> Dict[str, Any]:
+        """Set today's water intake exactly."""
+        if not auth_token:
+            return {"success": False, "error": "Not authenticated"}
+        try:
+            response = requests.put(
+                f"{BASE_URL}/user/water",
+                json={"glasses": glasses, "ml": ml},
+                headers={"Authorization": f"Bearer {auth_token}"},
+                timeout=5
+            )
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            return _protected_failure(response, "Could not update water")
+        except:
+            return {"success": False, "error": "Connection failed"}
+
+    @staticmethod
     def get_water(auth_token: str = None) -> Dict[str, Any]:
         """Get today's water intake."""
         if not auth_token:

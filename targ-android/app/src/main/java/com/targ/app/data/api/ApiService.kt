@@ -114,6 +114,12 @@ interface ApiService {
         @Body request: WaterIntakeRequest
     ): Response<Map<String, Any>>
 
+    @PUT("/user/water")
+    suspend fun setWater(
+        @Header("Authorization") token: String,
+        @Body request: WaterIntakeRequest
+    ): Response<WaterIntakeResponse>
+
     @GET("/user/water")
     suspend fun getWater(
         @Header("Authorization") token: String

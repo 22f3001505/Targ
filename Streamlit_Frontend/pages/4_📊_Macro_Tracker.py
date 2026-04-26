@@ -659,7 +659,7 @@ if 'water_glasses' not in st.session_state:
 water_goal = 10  # glasses (2.5L)
 water_pct = min(100, round(st.session_state.water_glasses / water_goal * 100))
 
-w1, w2, w3 = st.columns([2, 1, 1])
+w1, w2, w3, w4 = st.columns([2, 1, 1, 1])
 with w1:
     st.markdown(f"""
     <div class="card">
@@ -677,16 +677,44 @@ with w1:
 
 with w2:
     if st.button("💧 +1 Glass", use_container_width=True):
-        st.session_state.water_glasses += 1
+        target_glasses = min(40, st.session_state.water_glasses + 1)
         if auth_token:
-            water_result = APIClient.log_water(glasses=1, auth_token=auth_token)
+            water_result = APIClient.set_water(glasses=target_glasses, auth_token=auth_token)
             handle_auth_expired(water_result)
+            if water_result.get("success"):
+                st.session_state.water_glasses = water_result["data"].get("glasses", target_glasses)
+            else:
+                st.error(water_result.get("error", "Could not update water"))
+                st.stop()
+        else:
+            st.session_state.water_glasses = target_glasses
         st.rerun()
 
 with w3:
     if st.button("💧 +2 Glasses", use_container_width=True):
-        st.session_state.water_glasses += 2
+        target_glasses = min(40, st.session_state.water_glasses + 2)
         if auth_token:
-            water_result = APIClient.log_water(glasses=2, auth_token=auth_token)
+            water_result = APIClient.set_water(glasses=target_glasses, auth_token=auth_token)
             handle_auth_expired(water_result)
+            if water_result.get("success"):
+                st.session_state.water_glasses = water_result["data"].get("glasses", target_glasses)
+            else:
+                st.error(water_result.get("error", "Could not update water"))
+                st.stop()
+        else:
+            st.session_state.water_glasses = target_glasses
+        st.rerun()
+
+with w4:
+    if st.button("↺ Reset", use_container_width=True):
+        if auth_token:
+            water_result = APIClient.set_water(glasses=0, auth_token=auth_token)
+            handle_auth_expired(water_result)
+            if water_result.get("success"):
+                st.session_state.water_glasses = 0
+            else:
+                st.error(water_result.get("error", "Could not reset water"))
+                st.stop()
+        else:
+            st.session_state.water_glasses = 0
         st.rerun()

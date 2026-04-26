@@ -185,6 +185,20 @@ def main() -> int:
         assert_status(response)
         assert response.json()["glasses"] == 2
 
+        response = client.put("/user/water", headers=headers, json={"glasses": 1})
+        assert_status(response)
+        assert response.json()["glasses"] == 1
+        assert response.json()["total_ml"] == 250
+
+        response = client.put("/user/water", headers=headers, json={"glasses": 0, "ml": 0})
+        assert_status(response)
+        assert response.json()["glasses"] == 0
+        assert response.json()["total_ml"] == 0
+
+        response = client.get("/user/water", headers=headers)
+        assert_status(response)
+        assert response.json()["glasses"] == 0
+
         response = client.get("/user/meals", headers=headers)
         assert_status(response)
         assert all(meal["meal_type"] != "water" for meal in response.json())
