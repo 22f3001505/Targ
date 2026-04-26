@@ -18,8 +18,8 @@ android {
         applicationId = "com.targ.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "7.2.5"
+        versionCode = 14
+        versionName = "7.2.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
         buildConfigField("String", "TARG_API_BASE_URL", "\"$targApiBaseUrl\"")

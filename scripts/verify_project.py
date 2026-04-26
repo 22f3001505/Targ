@@ -139,8 +139,8 @@ def main() -> int:
             "/user/workouts",
             headers=headers,
             json={
-                "workout_focus": "Verification",
-                "exercises_completed": ["Running"],
+                "workout_focus": " Verification ",
+                "exercises_completed": ["  Running  ", "", "  Yoga   Flow  "],
                 "duration_minutes": 30,
                 "calories_burned": 260,
             },
@@ -150,6 +150,14 @@ def main() -> int:
         response = client.get("/user/workouts", headers=headers)
         assert_status(response)
         assert response.json()[0]["workout_focus"] == "Verification"
+        assert response.json()[0]["exercises_completed"] == ["Running", "Yoga Flow"]
+
+        response = client.post(
+            "/user/workouts",
+            headers=headers,
+            json={"workout_focus": "Verification", "exercises_completed": ["x" * 121]},
+        )
+        assert_status(response, 422)
 
         response = client.get("/user/stats", headers=headers)
         assert_status(response)

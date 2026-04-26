@@ -8,6 +8,7 @@ import requests
 import time
 from pathlib import Path
 from api import APIClient, BASE_URL
+from ui.safe import escape_html
 from ui.polish import inject_ui_polish
 from ui.ux import handle_auth_expired, require_login
 
@@ -350,6 +351,8 @@ if analyze_btn:
             st.session_state.workout_data = result["data"]
             st.session_state.health_data = result["data"]  # Sync across pages
         else:
+            if handle_auth_expired(result):
+                st.stop()
             from api import HealthCalculator
             bmi = HealthCalculator.calculate_bmi(weight, height)
             category = HealthCalculator.get_bmi_category(bmi)
@@ -412,8 +415,8 @@ with results_col:
         bmi_class = f"bmi-{category.lower()}"
         st.markdown(f"""
         <div style="text-align: center;">
-            <span class="bmi-badge {bmi_class}">{category}</span>
-            <p style="color: #666; margin-top: 8px;">{data["bmi_category"]["status"]}</p>
+            <span class="bmi-badge {escape_html(bmi_class)}">{escape_html(category)}</span>
+            <p style="color: #666; margin-top: 8px;">{escape_html(data["bmi_category"]["status"])}</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -452,14 +455,14 @@ with results_col:
         
         st.markdown(f"""
         <div class="workout-card">
-            <div class="workout-focus">🎯 {workout["focus"]}</div>
+            <div class="workout-focus">🎯 {escape_html(workout["focus"])}</div>
         """, unsafe_allow_html=True)
         
         for i, ex in enumerate(workout["exercises"], 1):
             st.markdown(f"""
             <div class="exercise-item">
                 <div class="exercise-number">{i}</div>
-                <div>{ex}</div>
+                <div>{escape_html(ex)}</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -468,7 +471,7 @@ with results_col:
         # Tips
         st.markdown(f"""
         <div class="tips-box">
-            <strong>💡 Pro Tip:</strong> {workout["tips"]}
+            <strong>💡 Pro Tip:</strong> {escape_html(workout["tips"])}
         </div>
         """, unsafe_allow_html=True)
         
@@ -490,9 +493,9 @@ with results_col:
             is_rest = activity_name == "Rest"
             day_class = "rest" if is_rest else "active"
             schedule_html += f"""
-            <div class="schedule-day {day_class}">
-                <div class="day-name">{day}</div>
-                <div class="day-activity">{activity_name}</div>
+            <div class="schedule-day {escape_html(day_class)}">
+                <div class="day-name">{escape_html(day)}</div>
+                <div class="day-activity">{escape_html(activity_name)}</div>
             </div>
             """
         schedule_html += '</div>'
@@ -531,8 +534,8 @@ with results_col:
                     st.markdown(f"""
                     <div style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); border-radius: 14px; padding: 24px; text-align: center; margin: 12px 0;">
                         <div style="color: white !important; font-size: 2.5rem; font-weight: 800;">{d['calories_burned']} kcal</div>
-                        <div style="color: rgba(255,255,255,0.9) !important; margin-top: 4px;">{d['exercise']} · {d['duration_minutes']} min · MET {d['met']}</div>
-                        <div style="color: rgba(255,255,255,0.7) !important; font-size: 0.8rem; margin-top: 8px;">Source: {d['source']}</div>
+                        <div style="color: rgba(255,255,255,0.9) !important; margin-top: 4px;">{escape_html(d['exercise'])} · {d['duration_minutes']} min · MET {d['met']}</div>
+                        <div style="color: rgba(255,255,255,0.7) !important; font-size: 0.8rem; margin-top: 8px;">Source: {escape_html(d['source'])}</div>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
@@ -583,10 +586,11 @@ with results_col:
                 st.markdown('<div class="card-title">📋 Recent Workouts</div>', unsafe_allow_html=True)
                 
                 for log in history["data"]:
-                    log_date = log.get("logged_at", "")[:10]
+                    log_date = escape_html(log.get("logged_at", "")[:10], 20)
+                    log_focus = escape_html(log.get('workout_focus', ''), 100)
                     st.markdown(f"""
                     <div style="padding: 12px; background: #F8FFF8; border-radius: 10px; margin-bottom: 8px; border-left: 3px solid #4CAF50;">
-                        <strong style="color: #2E7D32 !important;">{log.get('workout_focus', '')}</strong>
+                        <strong style="color: #2E7D32 !important;">{log_focus}</strong>
                         <span style="color: #666; float: right;">{log_date}</span><br>
                         <span style="color: #666;">⏱ {log.get('duration_minutes', 0)} min · 🔥 {log.get('calories_burned', 0)} kcal</span>
                     </div>

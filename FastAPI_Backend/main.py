@@ -36,7 +36,7 @@ from exercises_db import (
 # ═══════════════════════════════════════════════════
 # DATASET (memory-optimized for Render free tier 512MB)
 # ═══════════════════════════════════════════════════
-APP_VERSION = "7.2.5"
+APP_VERSION = "7.2.6"
 DATASET_DIR = Path(__file__).resolve().parent.parent / "Data"
 DATASET_LITE = DATASET_DIR / "dataset_lite.csv"
 DATASET_FULL = DATASET_DIR / "dataset.csv"
@@ -250,6 +250,19 @@ class LogWorkoutRequest(BaseModel):
         if not value:
             raise ValueError("Workout focus is required")
         return value
+
+    @field_validator("exercises_completed")
+    @classmethod
+    def clean_exercises_completed(cls, value: List[str]) -> List[str]:
+        cleaned = []
+        for item in value:
+            exercise = " ".join(str(item).strip().split())
+            if not exercise:
+                continue
+            if len(exercise) > 120:
+                raise ValueError("Exercise names must be 120 characters or fewer")
+            cleaned.append(exercise)
+        return cleaned
 
     @field_validator("notes")
     @classmethod
