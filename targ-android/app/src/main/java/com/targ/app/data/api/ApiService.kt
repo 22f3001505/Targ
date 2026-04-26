@@ -64,6 +64,12 @@ interface ApiService {
         @Body request: SaveMealRequest
     ): Response<Map<String, Any>>
 
+    @DELETE("/user/meals/{mealId}")
+    suspend fun deleteMeal(
+        @Header("Authorization") token: String,
+        @Path("mealId") mealId: Int
+    ): Response<Map<String, Any>>
+
     @DELETE("/user/meals/clear")
     suspend fun clearTrackedMeals(
         @Header("Authorization") token: String

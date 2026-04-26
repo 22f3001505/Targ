@@ -196,6 +196,15 @@ class HealthRepository {
         }
     }
 
+    suspend fun deleteMeal(token: String, mealId: Int): Result<Unit> {
+        return try {
+            val response = api.deleteMeal("Bearer $token", mealId)
+            if (response.isSuccessful) Result.success(Unit) else Result.failure(protectedError(response.code(), "Delete failed", response.errorBody()?.string()))
+        } catch (e: Exception) {
+            Result.failure(Exception("Cannot connect: ${e.message}"))
+        }
+    }
+
     suspend fun clearTrackedMeals(token: String): Result<Unit> {
         return try {
             val response = api.clearTrackedMeals("Bearer $token")

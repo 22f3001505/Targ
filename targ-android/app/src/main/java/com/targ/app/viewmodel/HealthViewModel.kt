@@ -442,6 +442,27 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun deleteMeal(mealId: Int) {
+        val token = _authToken.value ?: run {
+            _actionMessage.value = "Login to sync meal deletes"
+            return
+        }
+        viewModelScope.launch {
+            try {
+                repository.deleteMeal(token, mealId)
+                    .onSuccess {
+                        _actionMessage.value = "Meal deleted"
+                        loadSavedMeals()
+                        fetchUserStats()
+                    }
+                    .onFailure { handleRepositoryFailure(it, useActionMessage = true) }
+            } catch (e: Exception) {
+                Log.e("TARG", "Delete meal failed", e)
+                _errorMessage.value = "Meal delete failed: ${e.message}"
+            }
+        }
+    }
+
     fun logWorkout(focus: String, exercises: List<String>, duration: Int, caloriesBurned: Int) {
         val token = _authToken.value ?: run {
             _actionMessage.value = "Login to sync workouts"

@@ -103,6 +103,7 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
             val trackedMeals = savedMeals.filter { it.mealType == "tracked" }
             trackedMeals.forEach {
                 meals.add(mapOf(
+                    "id" to it.id.toString(),
                     "name" to it.mealName,
                     "cal" to it.calories.toInt().toString(),
                     "pro" to it.protein.toInt().toString(),
@@ -507,6 +508,9 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
                                     carbsCurrent -= (removed["carbs"]?.toIntOrNull() ?: 0)
                                     fatCurrent -= (removed["fat"]?.toIntOrNull() ?: 0)
                                     meals.removeAt(index)
+                                    removed["id"]?.toIntOrNull()?.takeIf { it > 0 }?.let { mealId ->
+                                        viewModel?.deleteMeal(mealId)
+                                    }
                                 }
                             ) {
                                 Text("🗑", modifier = Modifier.padding(8.dp), fontSize = 16.sp)

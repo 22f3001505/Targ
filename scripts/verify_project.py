@@ -123,6 +123,22 @@ def main() -> int:
         assert verify_meal["saved_at"]
         assert verify_meal["created_at"] == verify_meal["saved_at"]
 
+        response = client.delete(f"/user/meals/{verify_meal['id']}", headers=headers)
+        assert_status(response)
+        response = client.get("/user/meals", headers=headers)
+        assert_status(response)
+        assert all(meal["id"] != verify_meal["id"] for meal in response.json())
+
+        response = client.delete(f"/user/meals/{verify_meal['id']}", headers=headers)
+        assert_status(response, 404)
+
+        response = client.post(
+            "/user/meals",
+            headers=headers,
+            json={"meal_name": "Verify Meal", "meal_type": "tracked", "calories": 100, "protein": 10, "carbs": 8, "fat": 4},
+        )
+        assert_status(response)
+
         response = client.get("/user/stats", headers=headers)
         assert_status(response)
         assert response.json()["total_saved_meals"] == 1
