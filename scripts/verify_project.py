@@ -6,6 +6,7 @@ Run from the repository root:
 from __future__ import annotations
 
 import os
+import sqlite3
 import sys
 import tempfile
 from pathlib import Path
@@ -23,6 +24,17 @@ def assert_status(response, expected: int = 200) -> None:
 def main() -> int:
     db_path = Path(tempfile.gettempdir()) / "targ_verify_project.db"
     db_path.unlink(missing_ok=True)
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                username VARCHAR(100) NOT NULL UNIQUE,
+                hashed_password VARCHAR(255) NOT NULL
+            )
+            """
+        )
 
     os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
     os.environ.setdefault("SECRET_KEY", "verify-project-secret")
@@ -70,7 +82,9 @@ def main() -> int:
             json={"email": "verify@example.com", "username": "verify", "password": "secret123", "full_name": "Verify User"},
         )
         assert_status(response)
-        token = response.json()["access_token"]
+        signup_body = response.json()
+        assert signup_body["user"]["full_name"] == "Verify User"
+        token = signup_body["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 
         response = client.post("/auth/login", json={"username": "verify@example.com", "password": "secret123"})
@@ -89,6 +103,7 @@ def main() -> int:
         response = client.get("/auth/me", headers=headers)
         assert_status(response)
         assert response.json()["username"] == "verify"
+        assert response.json()["full_name"] == "Verify User"
 
         response = client.get("/user/stats", headers={"Authorization": "Bearer not-a-real-token"})
         assert_status(response, 401)
