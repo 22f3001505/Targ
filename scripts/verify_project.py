@@ -80,6 +80,10 @@ def main() -> int:
 
         response = client.post("/auth/refresh", headers=headers)
         assert_status(response)
+        refresh_body = response.json()
+        assert refresh_body["access_token"]
+        assert refresh_body["user"]["username"] == "verify"
+        headers = {"Authorization": f"Bearer {refresh_body['access_token']}"}
 
         response = client.get("/auth/me", headers=headers)
         assert_status(response)

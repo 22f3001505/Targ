@@ -159,17 +159,22 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                     fullName = prefs[SessionKeys.FULL_NAME] ?: ""
                 )
 
-                repository.getProfile(token)
+                repository.refreshToken(token)
                     .onSuccess {
-                        _userData.value = it
-                        persistSession(token, it)
+                        _authToken.value = it.accessToken
+                        _userData.value = it.user
+                        persistSession(it.accessToken, it.user)
                         fetchUserStats()
                         loadSavedMeals()
                         loadWater()
                         loadMealPlan()
                     }
-                    .onFailure {
-                        clearStoredSession()
+                    .onFailure { error ->
+                        if (error.message == HealthRepository.SESSION_EXPIRED_MESSAGE) {
+                            clearStoredSession()
+                        } else {
+                            _actionMessage.value = "Using saved session. Connect to sync latest data."
+                        }
                     }
             } catch (e: Exception) {
                 Log.e("TARG", "Session restore failed", e)

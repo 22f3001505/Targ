@@ -42,6 +42,10 @@ interface ApiService {
     @POST("/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
 
+    // ─── AUTH: Refresh Current Session ───
+    @POST("/auth/refresh")
+    suspend fun refreshToken(@Header("Authorization") token: String): Response<AuthResponse>
+
     // ─── AUTH: Get Profile ───
     @GET("/auth/me")
     suspend fun getProfile(@Header("Authorization") token: String): Response<UserData>

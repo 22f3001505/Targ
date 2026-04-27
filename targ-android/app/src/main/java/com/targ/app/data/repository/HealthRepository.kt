@@ -2,6 +2,7 @@ package com.targ.app.data.repository
 
 import com.targ.app.data.api.ApiClient
 import com.targ.app.data.model.*
+import retrofit2.Response
 
 class HealthRepository {
 
@@ -27,17 +28,39 @@ class HealthRepository {
         return Exception(message)
     }
 
+    private fun <T> bodyOrFailure(response: Response<T>, defaultMessage: String): Result<T> {
+        val body = response.body()
+        return if (response.isSuccessful && body != null) {
+            Result.success(body)
+        } else {
+            Result.failure(Exception(apiError(defaultMessage, response.errorBody()?.string())))
+        }
+    }
+
+    private fun <T> protectedBodyOrFailure(response: Response<T>, defaultMessage: String): Result<T> {
+        val body = response.body()
+        return if (response.isSuccessful && body != null) {
+            Result.success(body)
+        } else {
+            Result.failure(protectedError(response.code(), defaultMessage, response.errorBody()?.string()))
+        }
+    }
+
+    private fun protectedUnitOrFailure(response: Response<*>, defaultMessage: String): Result<Unit> {
+        return if (response.isSuccessful) {
+            Result.success(Unit)
+        } else {
+            Result.failure(protectedError(response.code(), defaultMessage, response.errorBody()?.string()))
+        }
+    }
+
     // ═══════════════════════════════════════════
     // HEALTH CHECK (v6.0)
     // ═══════════════════════════════════════════
     suspend fun healthCheck(): Result<HealthCheckResponse> {
         return try {
             val response = api.healthCheck()
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(Exception("API unavailable"))
-            }
+            bodyOrFailure(response, "API unavailable")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect to server: ${e.message}"))
         }
@@ -50,8 +73,9 @@ class HealthRepository {
         return try {
             val bearerToken = authToken?.let { "Bearer $it" }
             val response = api.getHealthAnalysis(request, bearerToken)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                Result.success(body)
             } else if (authToken != null && (response.code() == 401 || response.code() == 403)) {
                 Result.failure(protectedError(response.code(), "Analysis sync failed", response.errorBody()?.string()))
             } else {
@@ -74,11 +98,7 @@ class HealthRepository {
     suspend fun getDietRecommendation(request: DietRequest): Result<DietResponse> {
         return try {
             val response = api.getDietRecommendation(request)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(Exception("No results from API (${response.code()})"))
-            }
+            bodyOrFailure(response, "No results from API (${response.code()})")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect to recipe API: ${e.message}"))
         }
@@ -90,11 +110,7 @@ class HealthRepository {
     suspend fun getExercises(category: String? = null, difficulty: String? = null): Result<ExercisesResponse> {
         return try {
             val response = api.getExercises(category, difficulty)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(Exception("Failed to fetch exercises"))
-            }
+            bodyOrFailure(response, "Failed to fetch exercises")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -104,11 +120,7 @@ class HealthRepository {
         return try {
             val request = CalorieEstimateRequest(exerciseName, weightKg, durationMin)
             val response = api.estimateExerciseCalories(request)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(Exception("Calorie estimation failed"))
-            }
+            bodyOrFailure(response, "Calorie estimation failed")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -120,8 +132,9 @@ class HealthRepository {
     suspend fun login(username: String, password: String): Result<AuthResponse> {
         return try {
             val response = api.login(LoginRequest(username, password))
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                Result.success(body)
             } else {
                 val msg = if (response.code() == 401) "Invalid username/email or password" else apiError("Login failed", response.errorBody()?.string())
                 Result.failure(Exception(msg))
@@ -134,8 +147,9 @@ class HealthRepository {
     suspend fun signup(email: String, username: String, password: String, fullName: String): Result<AuthResponse> {
         return try {
             val response = api.signup(SignupRequest(email, username, password, fullName))
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+            val body = response.body()
+            if (response.isSuccessful && body != null) {
+                Result.success(body)
             } else {
                 val msg = when (response.code()) {
                     400, 422 -> apiError("Check your email, username, and password", response.errorBody()?.string())
@@ -148,14 +162,19 @@ class HealthRepository {
         }
     }
 
+    suspend fun refreshToken(token: String): Result<AuthResponse> {
+        return try {
+            val response = api.refreshToken("Bearer $token")
+            protectedBodyOrFailure(response, "Session expired")
+        } catch (e: Exception) {
+            Result.failure(Exception("Cannot connect to server: ${e.message}"))
+        }
+    }
+
     suspend fun getUserStats(token: String): Result<UserStatsResponse> {
         return try {
             val response = api.getUserStats("Bearer $token")
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(protectedError(response.code(), "Failed to fetch stats", response.errorBody()?.string()))
-            }
+            protectedBodyOrFailure(response, "Failed to fetch stats")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -164,11 +183,7 @@ class HealthRepository {
     suspend fun getProfile(token: String): Result<UserData> {
         return try {
             val response = api.getProfile("Bearer $token")
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(protectedError(response.code(), "Session expired", response.errorBody()?.string()))
-            }
+            protectedBodyOrFailure(response, "Session expired")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -177,11 +192,7 @@ class HealthRepository {
     suspend fun getSavedMeals(token: String, limit: Int = 20): Result<List<SavedMealResponse>> {
         return try {
             val response = api.getSavedMeals("Bearer $token", limit)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(protectedError(response.code(), "Failed to fetch meals", response.errorBody()?.string()))
-            }
+            protectedBodyOrFailure(response, "Failed to fetch meals")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -190,7 +201,7 @@ class HealthRepository {
     suspend fun saveMeal(token: String, request: SaveMealRequest): Result<Unit> {
         return try {
             val response = api.saveMeal("Bearer $token", request)
-            if (response.isSuccessful) Result.success(Unit) else Result.failure(protectedError(response.code(), "Save failed", response.errorBody()?.string()))
+            protectedUnitOrFailure(response, "Save failed")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -199,7 +210,7 @@ class HealthRepository {
     suspend fun deleteMeal(token: String, mealId: Int): Result<Unit> {
         return try {
             val response = api.deleteMeal("Bearer $token", mealId)
-            if (response.isSuccessful) Result.success(Unit) else Result.failure(protectedError(response.code(), "Delete failed", response.errorBody()?.string()))
+            protectedUnitOrFailure(response, "Delete failed")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -208,7 +219,7 @@ class HealthRepository {
     suspend fun clearTrackedMeals(token: String): Result<Unit> {
         return try {
             val response = api.clearTrackedMeals("Bearer $token")
-            if (response.isSuccessful) Result.success(Unit) else Result.failure(protectedError(response.code(), "Clear failed", response.errorBody()?.string()))
+            protectedUnitOrFailure(response, "Clear failed")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -217,7 +228,7 @@ class HealthRepository {
     suspend fun logWorkout(token: String, request: LogWorkoutRequest): Result<Unit> {
         return try {
             val response = api.logWorkout("Bearer $token", request)
-            if (response.isSuccessful) Result.success(Unit) else Result.failure(protectedError(response.code(), "Log failed", response.errorBody()?.string()))
+            protectedUnitOrFailure(response, "Log failed")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -226,7 +237,7 @@ class HealthRepository {
     suspend fun saveMealPlan(token: String, request: SaveMealPlanRequest): Result<Unit> {
         return try {
             val response = api.saveMealPlan("Bearer $token", request)
-            if (response.isSuccessful) Result.success(Unit) else Result.failure(protectedError(response.code(), "Meal plan save failed", response.errorBody()?.string()))
+            protectedUnitOrFailure(response, "Meal plan save failed")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -235,11 +246,7 @@ class HealthRepository {
     suspend fun getMealPlan(token: String): Result<MealPlanResponse> {
         return try {
             val response = api.getMealPlan("Bearer $token")
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(protectedError(response.code(), "No meal plan found", response.errorBody()?.string()))
-            }
+            protectedBodyOrFailure(response, "No meal plan found")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -248,11 +255,7 @@ class HealthRepository {
     suspend fun searchFoods(query: String, limit: Int = 20): Result<List<FoodItem>> {
         return try {
             val response = api.searchFoods(query, limit)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!.foods)
-            } else {
-                Result.failure(Exception("Food search failed"))
-            }
+            bodyOrFailure(response, "Food search failed").map { it.foods }
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -261,11 +264,7 @@ class HealthRepository {
     suspend fun getPopularFoods(limit: Int = 30): Result<List<FoodItem>> {
         return try {
             val response = api.getPopularFoods(limit)
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!.foods)
-            } else {
-                Result.failure(Exception("Popular foods unavailable"))
-            }
+            bodyOrFailure(response, "Popular foods unavailable").map { it.foods }
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -287,11 +286,7 @@ class HealthRepository {
     suspend fun setWater(token: String, glasses: Int = 0, ml: Int = 0): Result<WaterIntakeResponse> {
         return try {
             val response = api.setWater("Bearer $token", WaterIntakeRequest(glasses, ml))
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(protectedError(response.code(), "Water update failed", response.errorBody()?.string()))
-            }
+            protectedBodyOrFailure(response, "Water update failed")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -300,11 +295,7 @@ class HealthRepository {
     suspend fun getWater(token: String): Result<WaterIntakeResponse> {
         return try {
             val response = api.getWater("Bearer $token")
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
-            } else {
-                Result.failure(protectedError(response.code(), "Water data unavailable", response.errorBody()?.string()))
-            }
+            protectedBodyOrFailure(response, "Water data unavailable")
         } catch (e: Exception) {
             Result.failure(Exception("Cannot connect: ${e.message}"))
         }
@@ -362,7 +353,11 @@ class HealthRepository {
                 mildGain = (maintenance * 1.1).toInt(),
                 weightGain = (maintenance * 1.2).toInt()
             ),
-            workoutPlan = workoutPlans[cat] ?: workoutPlans["Normal"]!!
+            workoutPlan = workoutPlans[cat] ?: WorkoutPlan(
+                focus = "Balanced Fitness",
+                exercises = listOf("Cardio + Strength mix", "HIIT (2x/week)", "Yoga/mobility", "Core work"),
+                tips = "Maintain balanced nutrition."
+            )
         )
     }
 }

@@ -36,7 +36,7 @@ from exercises_db import (
 # ═══════════════════════════════════════════════════
 # DATASET (memory-optimized for Render free tier 512MB)
 # ═══════════════════════════════════════════════════
-APP_VERSION = "7.2.8"
+APP_VERSION = "7.2.9"
 DATASET_DIR = Path(__file__).resolve().parent.parent / "Data"
 DATASET_LITE = DATASET_DIR / "dataset_lite.csv"
 DATASET_FULL = DATASET_DIR / "dataset.csv"

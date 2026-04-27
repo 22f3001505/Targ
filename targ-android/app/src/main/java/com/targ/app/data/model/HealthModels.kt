@@ -154,6 +154,8 @@ data class AuthResponse(
     val accessToken: String,
     @SerializedName("token_type")
     val tokenType: String = "bearer",
+    @SerializedName("expires_in")
+    val expiresIn: Int = 0,
     val user: UserData
 )
 
