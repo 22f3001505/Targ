@@ -36,7 +36,7 @@ from exercises_db import (
 # ═══════════════════════════════════════════════════
 # DATASET (memory-optimized for Render free tier 512MB)
 # ═══════════════════════════════════════════════════
-APP_VERSION = "7.2.9"
+APP_VERSION = "7.3.0"
 DATASET_DIR = Path(__file__).resolve().parent.parent / "Data"
 DATASET_LITE = DATASET_DIR / "dataset_lite.csv"
 DATASET_FULL = DATASET_DIR / "dataset.csv"
@@ -358,7 +358,7 @@ def home():
         "dataset_size": len(dataset),
         "exercise_count": len(EXERCISE_DATABASE),
         "endpoints": {
-            "public": ["/", "/health/", "/predict/", "/exercises", "/exercises/calories", "/foods/search"],
+            "public": ["/", "/health/", "/predict/", "/exercises", "/exercises/calories", "/foods/search", "/foods/popular"],
             "auth": ["/auth/signup", "/auth/login", "/auth/me", "/auth/refresh"],
             "protected": ["/user/health-records", "/user/health-records/trend", "/user/meals", "/user/workouts", "/user/meal-plan", "/user/water", "/user/stats"]
         }

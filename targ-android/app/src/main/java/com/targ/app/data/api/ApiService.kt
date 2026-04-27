@@ -86,6 +86,12 @@ interface ApiService {
         @Body request: LogWorkoutRequest
     ): Response<Map<String, Any>>
 
+    @GET("/user/workouts")
+    suspend fun getWorkoutHistory(
+        @Header("Authorization") token: String,
+        @Query("limit") limit: Int = 10
+    ): Response<List<WorkoutLogResponse>>
+
     // ─── PROTECTED: Meal Planner ───
     @POST("/user/meal-plan")
     suspend fun saveMealPlan(

@@ -26,12 +26,14 @@ fun WorkoutScreen(viewModel: HealthViewModel) {
     val categories by viewModel.exerciseCategories.collectAsState()
     val calorieEstimate by viewModel.calorieEstimate.collectAsState()
     val isExerciseLoading by viewModel.isExerciseLoading.collectAsState()
+    val workoutHistory by viewModel.workoutHistory.collectAsState()
     val actionMessage by viewModel.actionMessage.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     // Load exercises on first render
     LaunchedEffect(Unit) {
         if (exercises.isEmpty()) viewModel.fetchExercises()
+        viewModel.loadWorkoutHistory()
     }
 
     var selectedCategory by remember { mutableStateOf<String?>(null) }
@@ -93,6 +95,9 @@ fun WorkoutScreen(viewModel: HealthViewModel) {
             // Show workout log even without health analysis
             if (workoutLog.isNotEmpty()) {
                 WorkoutLogSection(workoutLog, totalCalBurned, totalDuration)
+            }
+            if (workoutHistory.isNotEmpty()) {
+                SyncedWorkoutHistorySection(workoutHistory)
             }
 
             Spacer(Modifier.height(24.dp))
@@ -237,6 +242,10 @@ fun WorkoutScreen(viewModel: HealthViewModel) {
             WorkoutLogSection(workoutLog, totalCalBurned, totalDuration)
         }
 
+        if (workoutHistory.isNotEmpty()) {
+            SyncedWorkoutHistorySection(workoutHistory)
+        }
+
         ExplanationBox(
             "Exercise calorie estimates use MET values from the Compendium of Physical Activities. " +
             "Formula: MET × weight(kg) × duration(hrs). Always warm up before exercise."
@@ -244,6 +253,50 @@ fun WorkoutScreen(viewModel: HealthViewModel) {
 
         Spacer(Modifier.height(24.dp))
     }
+}
+
+@Composable
+private fun SyncedWorkoutHistorySection(
+    workouts: List<com.targ.app.data.model.WorkoutLogResponse>
+) {
+    TargCard {
+        CardTitle("☁️ Synced Workout History", "")
+
+        workouts.take(5).forEach { workout ->
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = OffWhite,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            workout.workoutFocus,
+                            fontWeight = FontWeight.SemiBold,
+                            color = DarkText,
+                            fontSize = 13.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(formatWorkoutDate(workout.loggedAt), color = LightText, fontSize = 11.sp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        NutrientBadge("🔥${workout.caloriesBurned}", true)
+                        NutrientBadge("⏱${workout.durationMinutes}m")
+                        NutrientBadge("${workout.exercisesCompleted.size} exercises")
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatWorkoutDate(value: String): String {
+    return value.replace("T", " ").take(16).ifBlank { "Recently" }
 }
 
 @Composable

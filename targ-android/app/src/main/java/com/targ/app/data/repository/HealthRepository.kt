@@ -234,6 +234,15 @@ class HealthRepository {
         }
     }
 
+    suspend fun getWorkoutHistory(token: String, limit: Int = 10): Result<List<WorkoutLogResponse>> {
+        return try {
+            val response = api.getWorkoutHistory("Bearer $token", limit)
+            protectedBodyOrFailure(response, "Failed to fetch workouts")
+        } catch (e: Exception) {
+            Result.failure(Exception("Cannot connect: ${e.message}"))
+        }
+    }
+
     suspend fun saveMealPlan(token: String, request: SaveMealPlanRequest): Result<Unit> {
         return try {
             val response = api.saveMealPlan("Bearer $token", request)

@@ -223,6 +223,21 @@ data class LogWorkoutRequest(
     val notes: String = ""
 )
 
+data class WorkoutLogResponse(
+    val id: Int = 0,
+    @SerializedName("workout_focus")
+    val workoutFocus: String = "",
+    @SerializedName("exercises_completed")
+    val exercisesCompleted: List<String> = emptyList(),
+    @SerializedName("duration_minutes")
+    val durationMinutes: Int = 0,
+    @SerializedName("calories_burned")
+    val caloriesBurned: Int = 0,
+    val notes: String = "",
+    @SerializedName("logged_at")
+    val loggedAt: String = ""
+)
+
 data class SaveMealPlanRequest(
     @SerializedName("plan_data")
     val planData: Map<String, Map<String, String>>,

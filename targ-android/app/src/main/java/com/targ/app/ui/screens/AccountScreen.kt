@@ -28,6 +28,7 @@ fun AccountScreen(viewModel: HealthViewModel) {
     val userData by viewModel.userData.collectAsState()
     val userStats by viewModel.userStats.collectAsState()
     val savedMeals by viewModel.savedMeals.collectAsState()
+    val workoutHistory by viewModel.workoutHistory.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.errorMessage.collectAsState()
     val apiStatus by viewModel.apiStatus.collectAsState()
@@ -89,7 +90,7 @@ fun AccountScreen(viewModel: HealthViewModel) {
 
         if (viewModel.isLoggedIn) {
             // ═══════════════ LOGGED IN VIEW ═══════════════
-            LoggedInView(viewModel, userData, userStats, savedMeals)
+            LoggedInView(viewModel, userData, userStats, savedMeals, workoutHistory)
         } else {
             // ═══════════════ AUTH FORMS ═══════════════
             AuthForms(viewModel, isLoading)
@@ -104,7 +105,8 @@ private fun LoggedInView(
     viewModel: HealthViewModel,
     userData: com.targ.app.data.model.UserData?,
     userStats: com.targ.app.data.model.UserStatsResponse?,
-    savedMeals: List<com.targ.app.data.model.SavedMealResponse>
+    savedMeals: List<com.targ.app.data.model.SavedMealResponse>,
+    workoutHistory: List<com.targ.app.data.model.WorkoutLogResponse>
 ) {
     // Profile Card
     TargCard {
@@ -192,6 +194,35 @@ private fun LoggedInView(
         }
     }
 
+    if (workoutHistory.isNotEmpty()) {
+        TargCard {
+            CardTitle("🏋️ Recent Workouts", "")
+            workoutHistory.take(5).forEach { workout ->
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = OffWhite,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(workout.workoutFocus, fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold, color = DarkText)
+                            Text(formatWorkoutDate(workout.loggedAt), fontSize = 11.sp, color = LightText)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            NutrientBadge("🔥${workout.caloriesBurned}", true)
+                            NutrientBadge("${workout.durationMinutes}m")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     OutlinedButton(
         onClick = { viewModel.refreshAccountData() },
         modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -211,6 +242,10 @@ private fun LoggedInView(
     ) {
         Text("🚪 Logout", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
     }
+}
+
+private fun formatWorkoutDate(value: String): String {
+    return value.replace("T", " ").take(16).ifBlank { "Recently" }
 }
 
 @Composable

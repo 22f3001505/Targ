@@ -37,6 +37,7 @@ def main() -> int:
         root = response.json()
         assert root["version"].startswith("7.")
         assert root["dataset_size"] > 0
+        assert "/foods/popular" in root["endpoints"]["public"]
 
         response = client.get("/ready")
         assert_status(response)
@@ -169,8 +170,13 @@ def main() -> int:
 
         response = client.get("/user/workouts", headers=headers)
         assert_status(response)
-        assert response.json()[0]["workout_focus"] == "Verification"
-        assert response.json()[0]["exercises_completed"] == ["Running", "Yoga Flow"]
+        workout = response.json()[0]
+        assert workout["id"]
+        assert workout["workout_focus"] == "Verification"
+        assert workout["exercises_completed"] == ["Running", "Yoga Flow"]
+        assert workout["duration_minutes"] == 30
+        assert workout["calories_burned"] == 260
+        assert workout["logged_at"]
 
         response = client.post(
             "/user/workouts",

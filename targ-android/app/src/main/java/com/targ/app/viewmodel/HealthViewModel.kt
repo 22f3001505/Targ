@@ -67,6 +67,9 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
     private val _savedMeals = MutableStateFlow<List<SavedMealResponse>>(emptyList())
     val savedMeals: StateFlow<List<SavedMealResponse>> = _savedMeals
 
+    private val _workoutHistory = MutableStateFlow<List<WorkoutLogResponse>>(emptyList())
+    val workoutHistory: StateFlow<List<WorkoutLogResponse>> = _workoutHistory
+
     // ═══════════════════════════════════════════
     // HEALTH STATE
     // ═══════════════════════════════════════════
@@ -166,6 +169,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                         persistSession(it.accessToken, it.user)
                         fetchUserStats()
                         loadSavedMeals()
+                        loadWorkoutHistory()
                         loadWater()
                         loadMealPlan()
                     }
@@ -204,6 +208,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
         _userData.value = null
         _userStats.value = null
         _savedMeals.value = emptyList()
+        _workoutHistory.value = emptyList()
         _waterData.value = null
         _mealPlan.value = null
         _healthData.value = null
@@ -242,6 +247,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                     persistSession(it.accessToken, it.user)
                     fetchUserStats()
                     loadSavedMeals()
+                    loadWorkoutHistory()
                     loadWater()
                     loadMealPlan()
                 }
@@ -267,6 +273,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                     persistSession(it.accessToken, it.user)
                     fetchUserStats()
                     loadSavedMeals()
+                    loadWorkoutHistory()
                     loadWater()
                     loadMealPlan()
                 }
@@ -286,6 +293,7 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
     fun refreshAccountData() {
         fetchUserStats()
         loadSavedMeals()
+        loadWorkoutHistory()
         loadWater()
         loadMealPlan()
     }
@@ -479,11 +487,25 @@ class HealthViewModel(application: Application) : AndroidViewModel(application) 
                     .onSuccess {
                         _actionMessage.value = "Workout logged"
                         fetchUserStats()
+                        loadWorkoutHistory()
                     }
                     .onFailure { handleRepositoryFailure(it) }
             } catch (e: Exception) {
                 Log.e("TARG", "Log workout failed", e)
                 _errorMessage.value = "Workout log failed: ${e.message}"
+            }
+        }
+    }
+
+    fun loadWorkoutHistory(limit: Int = 10) {
+        val token = _authToken.value ?: return
+        viewModelScope.launch {
+            try {
+                repository.getWorkoutHistory(token, limit)
+                    .onSuccess { _workoutHistory.value = it }
+                    .onFailure { handleRepositoryFailure(it) }
+            } catch (e: Exception) {
+                Log.e("TARG", "Load workout history failed", e)
             }
         }
     }
