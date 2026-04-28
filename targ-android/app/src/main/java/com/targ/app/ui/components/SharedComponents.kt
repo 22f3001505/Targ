@@ -265,6 +265,8 @@ fun PrimaryButton(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val contentColor = if (enabled && !isLoading) White else DarkGreen
+
     Button(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().heightIn(min = 50.dp),
@@ -279,13 +281,13 @@ fun PrimaryButton(
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(22.dp),
-                color = White,
+                color = contentColor,
                 strokeWidth = 2.dp
             )
             Spacer(Modifier.width(12.dp))
-            Text(loadingText, color = White, fontWeight = FontWeight.SemiBold)
+            Text(loadingText, color = contentColor, fontWeight = FontWeight.SemiBold)
         } else {
-            Text(text, color = White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            Text(text, color = contentColor, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
         }
     }
 }
