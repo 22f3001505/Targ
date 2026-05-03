@@ -9,7 +9,7 @@ from pathlib import Path
 from api import APIClient, BASE_URL
 from ui.polish import inject_ui_polish
 from ui.safe import escape_html
-from ui.ux import handle_auth_expired, render_flow_status, require_login
+from ui.ux import add_tracked_meal_to_session, handle_auth_expired, render_flow_status, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -479,8 +479,8 @@ with results_col:
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        # Save + Expand row
-                        btn_col, exp_col = st.columns([1, 2])
+                        # Save, track, and inspect row
+                        btn_col, track_col, exp_col = st.columns([1, 1, 2])
                         with btn_col:
                             auth_token = st.session_state.get('auth_token')
                             if auth_token:
@@ -495,6 +495,15 @@ with results_col:
                                         st.success(f"⭐ Saved: {name[:30]}")
                                     else:
                                         st.error(result.get("error", "Failed to save"))
+                        with track_col:
+                            if st.button("➕ Track", key=f"track_diet_{idx}"):
+                                track_result = add_tracked_meal_to_session(name, cal, pro, carb, fat_val)
+                                if track_result.get("success"):
+                                    st.success(f"Added to Macro Tracker: {name[:30]}")
+                                    if hasattr(st, "page_link"):
+                                        st.page_link("pages/4_📊_Macro_Tracker.py", label="Open Macro Tracker")
+                                else:
+                                    st.error(track_result.get("error", "Could not add to tracker"))
                         with exp_col:
                             if ingredients:
                                 with st.expander(f"📜 Ingredients"):
@@ -529,7 +538,7 @@ with results_col:
             
             for i, (meal_type, meals) in enumerate(sample_meals.items()):
                 with meal_tabs[i]:
-                    for meal in meals:
+                    for sample_idx, meal in enumerate(meals):
                         st.markdown(f"""
                         <div class="recipe-card">
                             <div class="recipe-name">🍽️ {meal["name"]}</div>
@@ -541,6 +550,16 @@ with results_col:
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
+                        if st.button("➕ Track", key=f"track_sample_{meal_type}_{sample_idx}", use_container_width=True):
+                            track_result = add_tracked_meal_to_session(
+                                meal["name"], meal["calories"], meal["protein"], meal["carbs"], meal["fat"]
+                            )
+                            if track_result.get("success"):
+                                st.success(f"Added to Macro Tracker: {meal['name'][:30]}")
+                                if hasattr(st, "page_link"):
+                                    st.page_link("pages/4_📊_Macro_Tracker.py", label="Open Macro Tracker")
+                            else:
+                                st.error(track_result.get("error", "Could not add to tracker"))
         
         st.markdown('</div>', unsafe_allow_html=True)
         

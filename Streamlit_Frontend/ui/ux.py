@@ -1,4 +1,5 @@
 """Shared Streamlit UX helpers for auth and session flow."""
+from datetime import datetime
 from html import escape
 
 import streamlit as st
@@ -68,8 +69,12 @@ def _find_step(path: str) -> tuple[str, str]:
 def _link_to_page(path: str, label: str, *, key: str) -> None:
     """Render a page link with a button fallback for older Streamlit versions."""
     if hasattr(st, "page_link"):
-        st.page_link(path, label=label)
-    elif st.button(label, key=key, use_container_width=True):
+        try:
+            st.page_link(path, label=label)
+            return
+        except KeyError:
+            pass
+    if st.button(label, key=key, use_container_width=True):
         st.switch_page(path)
 
 
@@ -85,6 +90,71 @@ def _coerce_int(value: object, default: int = 0) -> int:
         return int(value or default)
     except (TypeError, ValueError):
         return default
+
+
+def _ensure_meal_log_state() -> None:
+    meals_logged = st.session_state.get("meals_logged")
+    if not isinstance(meals_logged, list):
+        st.session_state.meals_logged = []
+
+    totals = st.session_state.get("totals")
+    if not isinstance(totals, dict):
+        meals = [meal for meal in st.session_state.meals_logged if isinstance(meal, dict)]
+        st.session_state.totals = {
+            "calories": sum(_coerce_int(meal.get("calories")) for meal in meals),
+            "protein": sum(_coerce_int(meal.get("protein")) for meal in meals),
+            "carbs": sum(_coerce_int(meal.get("carbs")) for meal in meals),
+            "fat": sum(_coerce_int(meal.get("fat")) for meal in meals),
+        }
+
+
+def add_tracked_meal_to_session(
+    name: str,
+    calories: float,
+    protein: float,
+    carbs: float,
+    fat: float,
+    *,
+    auth_token: str | None = None,
+) -> dict:
+    """Add a tracked meal from any page and keep local + cloud state in sync."""
+    auth_token = auth_token if auth_token is not None else st.session_state.get("auth_token")
+    meal_id = None
+    cloud_synced = False
+    if auth_token:
+        save_result = APIClient.save_meal(
+            meal_name=name,
+            calories=float(calories),
+            protein=float(protein),
+            carbs=float(carbs),
+            fat=float(fat),
+            meal_type="tracked",
+            auth_token=auth_token,
+        )
+        handle_auth_expired(save_result)
+        if not save_result.get("success"):
+            if save_result.get("error") != "Connection failed":
+                return save_result
+        else:
+            cloud_synced = True
+            meal_id = save_result.get("data", {}).get("meal_id")
+
+    _ensure_meal_log_state()
+    meal = {
+        "id": meal_id,
+        "name": str(name),
+        "calories": _coerce_int(calories),
+        "protein": _coerce_int(protein),
+        "carbs": _coerce_int(carbs),
+        "fat": _coerce_int(fat),
+        "time": datetime.now().strftime("%H:%M"),
+    }
+    st.session_state.meals_logged.append(meal)
+    st.session_state.totals["calories"] += meal["calories"]
+    st.session_state.totals["protein"] += meal["protein"]
+    st.session_state.totals["carbs"] += meal["carbs"]
+    st.session_state.totals["fat"] += meal["fat"]
+    return {"success": True, "data": meal, "cloud_synced": cloud_synced}
 
 
 def _session_flow_state() -> dict:

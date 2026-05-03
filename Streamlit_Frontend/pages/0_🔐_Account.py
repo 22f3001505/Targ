@@ -8,7 +8,7 @@ from pathlib import Path
 from api import APIClient
 from ui.polish import inject_ui_polish
 from ui.safe import escape_html
-from ui.ux import clear_user_session, consume_auth_redirect, ensure_session_fresh, handle_auth_expired, render_auth_redirect_notice, render_flow_status
+from ui.ux import add_tracked_meal_to_session, clear_user_session, consume_auth_redirect, ensure_session_fresh, handle_auth_expired, render_auth_redirect_notice, render_flow_status
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -320,6 +320,14 @@ if st.session_state.auth_token:
                 </div>
             </div>
             """, unsafe_allow_html=True)
+            if st.button("➕ Add saved recipe to Macro Tracker", key=f"track_saved_recipe_{meal.get('id') or idx}", use_container_width=True):
+                track_result = add_tracked_meal_to_session(meal.get('meal_name', 'Recipe'), m_cal, m_pro, m_carb, m_fat)
+                if track_result.get("success"):
+                    st.success(f"Added to Macro Tracker: {m_name}")
+                    if hasattr(st, "page_link"):
+                        st.page_link("pages/4_📊_Macro_Tracker.py", label="Open Macro Tracker")
+                else:
+                    st.error(track_result.get("error", "Could not add to tracker"))
     else:
         st.info("⭐ No saved recipes yet. Search for recipes and click **Save** to bookmark them here.")
     

@@ -8,7 +8,7 @@ from pathlib import Path
 from api import APIClient, BASE_URL
 from ui.polish import inject_ui_polish
 from ui.safe import escape_html
-from ui.ux import handle_auth_expired, render_flow_status, require_login
+from ui.ux import add_tracked_meal_to_session, handle_auth_expired, render_flow_status, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -384,15 +384,28 @@ if st.session_state.search_mode == "nutrition":
                             
                             auth_token = st.session_state.get('auth_token')
                             if auth_token:
-                                if st.button(f"⭐ Save", key=f"save_custom_{idx}"):
-                                    result_save = APIClient.save_meal(
-                                        meal_name=r_name, calories=float(r_cal),
-                                        protein=float(r_pro), carbs=float(r_carb), fat=float(r_fat),
-                                        meal_type="saved", auth_token=auth_token
-                                    )
-                                    handle_auth_expired(result_save)
-                                    if result_save["success"]:
-                                        st.success(f"⭐ Saved: {r_name[:30]}")
+                                save_col, track_col = st.columns(2)
+                                with save_col:
+                                    if st.button(f"⭐ Save", key=f"save_custom_{idx}", use_container_width=True):
+                                        result_save = APIClient.save_meal(
+                                            meal_name=r_name, calories=float(r_cal),
+                                            protein=float(r_pro), carbs=float(r_carb), fat=float(r_fat),
+                                            meal_type="saved", auth_token=auth_token
+                                        )
+                                        handle_auth_expired(result_save)
+                                        if result_save["success"]:
+                                            st.success(f"⭐ Saved: {r_name[:30]}")
+                                        else:
+                                            st.error(result_save.get("error", "Failed to save"))
+                                with track_col:
+                                    if st.button("➕ Track", key=f"track_custom_{idx}", use_container_width=True):
+                                        track_result = add_tracked_meal_to_session(r_name, r_cal, r_pro, r_carb, r_fat)
+                                        if track_result.get("success"):
+                                            st.success(f"Added to Macro Tracker: {r_name[:30]}")
+                                            if hasattr(st, "page_link"):
+                                                st.page_link("pages/4_📊_Macro_Tracker.py", label="Open Macro Tracker")
+                                        else:
+                                            st.error(track_result.get("error", "Could not add to tracker"))
                         
                         st.markdown('</div>', unsafe_allow_html=True)
                     else:
@@ -472,15 +485,28 @@ else:
                             # Save button
                             auth_token = st.session_state.get('auth_token')
                             if auth_token:
-                                if st.button(f"⭐ Save", key=f"save_ing_{idx}"):
-                                    result_save = APIClient.save_meal(
-                                        meal_name=name, calories=float(cal),
-                                        protein=float(pro), carbs=float(carb), fat=float(fat_val),
-                                        meal_type="saved", auth_token=auth_token
-                                    )
-                                    handle_auth_expired(result_save)
-                                    if result_save["success"]:
-                                        st.success(f"⭐ Saved: {name[:30]}")
+                                save_col, track_col = st.columns(2)
+                                with save_col:
+                                    if st.button(f"⭐ Save", key=f"save_ing_{idx}", use_container_width=True):
+                                        result_save = APIClient.save_meal(
+                                            meal_name=name, calories=float(cal),
+                                            protein=float(pro), carbs=float(carb), fat=float(fat_val),
+                                            meal_type="saved", auth_token=auth_token
+                                        )
+                                        handle_auth_expired(result_save)
+                                        if result_save["success"]:
+                                            st.success(f"⭐ Saved: {name[:30]}")
+                                        else:
+                                            st.error(result_save.get("error", "Failed to save"))
+                                with track_col:
+                                    if st.button("➕ Track", key=f"track_ing_{idx}", use_container_width=True):
+                                        track_result = add_tracked_meal_to_session(name, cal, pro, carb, fat_val)
+                                        if track_result.get("success"):
+                                            st.success(f"Added to Macro Tracker: {name[:30]}")
+                                            if hasattr(st, "page_link"):
+                                                st.page_link("pages/4_📊_Macro_Tracker.py", label="Open Macro Tracker")
+                                        else:
+                                            st.error(track_result.get("error", "Could not add to tracker"))
                         
                         st.markdown('</div>', unsafe_allow_html=True)
                     else:

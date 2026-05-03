@@ -7,11 +7,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 import requests
 from pathlib import Path
-from datetime import datetime
 from api import APIClient, BASE_URL
 from ui.polish import inject_ui_polish
 from ui.safe import escape_html
-from ui.ux import handle_auth_expired, render_flow_status, require_login
+from ui.ux import add_tracked_meal_to_session, handle_auth_expired, render_flow_status, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -359,38 +358,7 @@ if 'totals' not in st.session_state:
 
 def add_tracked_meal(name: str, calories: float, protein: float, carbs: float, fat: float) -> dict:
     """Add a tracked meal locally and sync it to the account."""
-    auth_token = st.session_state.get('auth_token')
-    meal_id = None
-    if auth_token:
-        save_result = APIClient.save_meal(
-            meal_name=name,
-            calories=float(calories),
-            protein=float(protein),
-            carbs=float(carbs),
-            fat=float(fat),
-            meal_type="tracked",
-            auth_token=auth_token
-        )
-        handle_auth_expired(save_result)
-        if not save_result.get("success"):
-            return save_result
-        meal_id = save_result.get("data", {}).get("meal_id")
-
-    meal = {
-        "id": meal_id,
-        "name": name,
-        "calories": int(calories),
-        "protein": int(protein),
-        "carbs": int(carbs),
-        "fat": int(fat),
-        "time": datetime.now().strftime("%H:%M")
-    }
-    st.session_state.meals_logged.append(meal)
-    st.session_state.totals["calories"] += meal["calories"]
-    st.session_state.totals["protein"] += meal["protein"]
-    st.session_state.totals["carbs"] += meal["carbs"]
-    st.session_state.totals["fat"] += meal["fat"]
-    return {"success": True, "data": meal}
+    return add_tracked_meal_to_session(name, calories, protein, carbs, fat)
 
 
 def delete_logged_meal(index: int) -> dict:
