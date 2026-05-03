@@ -159,7 +159,7 @@ with st.sidebar:
     if st.session_state.auth_token:
         user = st.session_state.user_data
         st.success(f"✅ Logged in as **{user.get('username', '')}**")
-        if st.button("🚪 Logout", use_container_width=True):
+        if st.button("🚪 Logout", width="stretch"):
             clear_user_session()
             st.rerun()
     else:
@@ -206,7 +206,7 @@ if st.session_state.auth_token:
     st.markdown('</div>', unsafe_allow_html=True)
 
     if pending_target:
-        if st.button("Continue where you left off", use_container_width=True, type="primary"):
+        if st.button("Continue where you left off", width="stretch", type="primary"):
             st.switch_page(consume_auth_redirect())
     
     # User stats via APIClient
@@ -265,7 +265,7 @@ if st.session_state.auth_token:
         cols = st.columns(3)
         for col, (label, target, button_type) in zip(cols, quick_actions[row_start:row_start + 3]):
             with col:
-                if st.button(label, use_container_width=True, type=button_type):
+                if st.button(label, width="stretch", type=button_type):
                     st.switch_page(target)
     
     # ═══════════════════════════════════════════════════════════════
@@ -297,7 +297,7 @@ if st.session_state.auth_token:
                 paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                 xaxis=dict(showgrid=False), yaxis=dict(title='BMI', gridcolor='rgba(0,0,0,0.05)'),
                 font_family='Inter')
-            st.plotly_chart(fig_bmi, use_container_width=True)
+            st.plotly_chart(fig_bmi, width="stretch")
         
         with tab_weight:
             fig_w = go.Figure()
@@ -308,7 +308,7 @@ if st.session_state.auth_token:
                 paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                 xaxis=dict(showgrid=False), yaxis=dict(title='Weight (kg)', gridcolor='rgba(0,0,0,0.05)'),
                 font_family='Inter')
-            st.plotly_chart(fig_w, use_container_width=True)
+            st.plotly_chart(fig_w, width="stretch")
         
         with tab_cal:
             fig_c = go.Figure()
@@ -318,7 +318,7 @@ if st.session_state.auth_token:
                 paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                 xaxis=dict(showgrid=False), yaxis=dict(title='kcal/day', gridcolor='rgba(0,0,0,0.05)'),
                 font_family='Inter')
-            st.plotly_chart(fig_c, use_container_width=True)
+            st.plotly_chart(fig_c, width="stretch")
     else:
         st.info("📊 Run a **Health Analysis** from the Diet page to start tracking your progress over time.")
     
@@ -350,7 +350,7 @@ if st.session_state.auth_token:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("➕ Add saved recipe to Macro Tracker", key=f"track_saved_recipe_{meal.get('id') or idx}", use_container_width=True):
+            if st.button("➕ Add saved recipe to Macro Tracker", key=f"track_saved_recipe_{meal.get('id') or idx}", width="stretch"):
                 track_result = add_tracked_meal_to_session(meal.get('meal_name', 'Recipe'), m_cal, m_pro, m_carb, m_fat)
                 if track_result.get("success"):
                     st.success(f"Added to Macro Tracker: {m_name}")
@@ -399,7 +399,7 @@ else:
             login_username = st.text_input("Username or email", placeholder="Enter your username or email")
             login_password = st.text_input("Password", type="password", placeholder="Enter your password")
             
-            if st.form_submit_button("🔑 Login", use_container_width=True):
+            if st.form_submit_button("🔑 Login", width="stretch"):
                 if login_username and login_password:
                     result = APIClient.login(login_username, login_password)
                     if result["success"]:
@@ -427,7 +427,7 @@ else:
             signup_password = st.text_input("Choose Password", type="password", placeholder="Min 8 characters, include a number")
             signup_confirm = st.text_input("Confirm Password", type="password", placeholder="Re-enter password")
             
-            if st.form_submit_button("📝 Create Account", use_container_width=True):
+            if st.form_submit_button("📝 Create Account", width="stretch"):
                 if not all([signup_fullname, signup_email, signup_username, signup_password]):
                     st.warning("Please fill in all fields")
                 elif len(signup_password) < 8:

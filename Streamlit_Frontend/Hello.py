@@ -487,7 +487,7 @@ for row_start in range(0, len(quick_actions), 3):
     cols = st.columns(3)
     for col, (label, target, button_type) in zip(cols, quick_actions[row_start:row_start + 3]):
         with col:
-            if st.button(label, use_container_width=True, type=button_type):
+            if st.button(label, width="stretch", type=button_type):
                 st.switch_page(target)
 
 # ═══════════════════════════════════════════════════════════════

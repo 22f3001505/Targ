@@ -6,10 +6,17 @@ import streamlit as st
 import requests
 import time
 from pathlib import Path
-from api import APIClient, BASE_URL
+from api import APIClient, BASE_URL, HealthCalculator
 from ui.polish import inject_ui_polish
 from ui.safe import escape_html
-from ui.ux import add_tracked_meal_to_session, handle_auth_expired, render_flow_status, require_login
+from ui.ux import (
+    add_tracked_meal_to_session,
+    handle_auth_expired,
+    normalize_bmi_category,
+    normalize_daily_calories,
+    render_flow_status,
+    require_login,
+)
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -324,7 +331,7 @@ with input_col:
         )
         
         st.markdown("<br>", unsafe_allow_html=True)
-        analyze_btn = st.form_submit_button("🔍 Analyze & Recommend", use_container_width=True)
+        analyze_btn = st.form_submit_button("🔍 Analyze & Recommend", width="stretch")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -363,19 +370,23 @@ if analyze_btn:
 with results_col:
     if st.session_state.health_data:
         data = st.session_state.health_data
+        bmi_info = normalize_bmi_category(data.get("bmi_category"), data.get("bmi"))
+        cals = normalize_daily_calories(data.get("daily_calories"))
+        bmi_value = data.get("bmi", "--")
+        bmr_value = int(float(data.get("bmr", 0) or 0))
         
         # ─── HEALTH SUMMARY ───
         st.markdown('<div class="results-card">', unsafe_allow_html=True)
         st.markdown('<div class="results-title">📊 Health Summary</div>', unsafe_allow_html=True)
         
         # BMI Category Badge
-        category = data["bmi_category"]["category"]
+        category = bmi_info["category"]
         bmi_class = f"bmi-{category.lower()}"
         
         st.markdown(f"""
         <div style="text-align: center; margin-bottom: 20px;">
-            <span class="bmi-badge {bmi_class}">{category}</span>
-            <p style="margin-top: 8px; color: #666;">{data["bmi_category"]["status"]}</p>
+            <span class="bmi-badge {escape_html(bmi_class)}">{escape_html(category)}</span>
+            <p style="margin-top: 8px; color: #666;">{escape_html(bmi_info["status"])}</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -383,15 +394,15 @@ with results_col:
         st.markdown(f"""
         <div class="metric-grid">
             <div class="metric-card">
-                <div class="metric-value">{data["bmi"]}</div>
+                <div class="metric-value">{bmi_value}</div>
                 <div class="metric-label">BMI</div>
             </div>
             <div class="metric-card">
-                <div class="metric-value">{int(data["bmr"])}</div>
+                <div class="metric-value">{bmr_value}</div>
                 <div class="metric-label">BMR (kcal)</div>
             </div>
             <div class="metric-card">
-                <div class="metric-value">{data["daily_calories"]["maintenance"]}</div>
+                <div class="metric-value">{cals["maintenance"]}</div>
                 <div class="metric-label">Daily Need</div>
             </div>
         </div>
@@ -403,7 +414,6 @@ with results_col:
         st.markdown('<div class="results-card">', unsafe_allow_html=True)
         st.markdown('<div class="results-title">🎯 Calorie Targets</div>', unsafe_allow_html=True)
         
-        cals = data["daily_calories"]
         st.markdown(f"""
         <div class="calorie-grid">
             <div class="calorie-card">
@@ -431,7 +441,7 @@ with results_col:
         st.markdown('<div class="results-card">', unsafe_allow_html=True)
         st.markdown('<div class="results-title">🥗 ML-Powered Diet Recommendations</div>', unsafe_allow_html=True)
         
-        cals_per_meal = data["daily_calories"]["maintenance"] // 3
+        cals_per_meal = cals["maintenance"] // 3
         
         st.markdown(f"""
         <div style="background: #E8F5E9; padding: 14px 18px; border-radius: 10px; margin-bottom: 16px; border-left: 4px solid #4CAF50;">
@@ -550,7 +560,7 @@ with results_col:
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
-                        if st.button("➕ Track", key=f"track_sample_{meal_type}_{sample_idx}", use_container_width=True):
+                        if st.button("➕ Track", key=f"track_sample_{meal_type}_{sample_idx}", width="stretch"):
                             track_result = add_tracked_meal_to_session(
                                 meal["name"], meal["calories"], meal["protein"], meal["carbs"], meal["fat"]
                             )
@@ -567,15 +577,23 @@ with results_col:
         st.markdown('<div class="results-card">', unsafe_allow_html=True)
         st.markdown('<div class="results-title">🏋️ Workout Preview</div>', unsafe_allow_html=True)
         
-        workout = data["workout_plan"]
-        st.success(f"**Focus:** {workout['focus']}")
+        fallback_workout = HealthCalculator.get_workout_plan(category)
+        workout_data = data.get("workout_plan") if isinstance(data.get("workout_plan"), dict) else {}
+        workout = {
+            "focus": workout_data.get("focus") or fallback_workout.get("focus", "Balanced Fitness"),
+            "exercises": workout_data.get("exercises") or fallback_workout.get("exercises", []),
+            "tips": workout_data.get("tips") or fallback_workout.get(
+                "tips", "Keep your plan consistent and adjust intensity gradually."
+            ),
+        }
+        st.success(f"**Focus:** {workout.get('focus', 'Balanced Fitness')}")
         
-        for exercise in workout["exercises"][:4]:
+        for exercise in workout.get("exercises", [])[:4]:
             st.markdown(f"✅ {exercise}")
         
-        st.info(f"💡 **Tip:** {workout['tips']}")
+        st.info(f"💡 **Tip:** {workout.get('tips', 'Keep your plan consistent and adjust intensity gradually.')}")
         
-        if st.button("🏋️ View Full Workout Plan", use_container_width=True):
+        if st.button("🏋️ View Full Workout Plan", width="stretch"):
             st.switch_page("pages/3_🏋️_Workout_Recommendation.py")
         
         st.markdown('</div>', unsafe_allow_html=True)

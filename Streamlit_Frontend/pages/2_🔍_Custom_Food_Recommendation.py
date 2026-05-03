@@ -292,11 +292,11 @@ st.markdown('<div class="card-title">🎯 Choose Search Method</div>', unsafe_al
 mode_col1, mode_col2 = st.columns(2)
 
 with mode_col1:
-    nutrition_mode = st.button("📊 Search by Nutrition", use_container_width=True, type="primary")
+    nutrition_mode = st.button("📊 Search by Nutrition", width="stretch", type="primary")
     st.caption("Specify exact nutritional targets")
 
 with mode_col2:
-    ingredient_mode = st.button("🥗 Search by Ingredients", use_container_width=True)
+    ingredient_mode = st.button("🥗 Search by Ingredients", width="stretch")
     st.caption("Find recipes with specific ingredients")
 
 st.markdown('</div>', unsafe_allow_html=True)
@@ -304,17 +304,119 @@ st.markdown('</div>', unsafe_allow_html=True)
 # Session state for mode
 if 'search_mode' not in st.session_state:
     st.session_state.search_mode = "nutrition"
+if 'custom_search_results' not in st.session_state:
+    st.session_state.custom_search_results = []
+if 'custom_search_title' not in st.session_state:
+    st.session_state.custom_search_title = ""
+if 'custom_search_key' not in st.session_state:
+    st.session_state.custom_search_key = "nutrition"
 
 if nutrition_mode:
+    if st.session_state.search_mode != "nutrition":
+        st.session_state.custom_search_results = []
+        st.session_state.custom_search_title = ""
     st.session_state.search_mode = "nutrition"
+    st.session_state.custom_search_key = "nutrition"
 if ingredient_mode:
+    if st.session_state.search_mode != "ingredients":
+        st.session_state.custom_search_results = []
+        st.session_state.custom_search_title = ""
     st.session_state.search_mode = "ingredients"
+    st.session_state.custom_search_key = "ingredients"
 
 health_meal_calories = 400
 if 'health_data' in st.session_state and st.session_state.health_data:
     maintenance = int(st.session_state.health_data.get('daily_calories', {}).get('maintenance', 0) or 0)
     if maintenance > 0:
         health_meal_calories = min(1000, max(100, round((maintenance / 3) / 10) * 10))
+
+
+def _recipe_number(recipe: dict, key: str, default: float = 0) -> float:
+    try:
+        return float(recipe.get(key, default) or default)
+    except (TypeError, ValueError):
+        return default
+
+
+def _recipe_ingredients(recipe: dict) -> list:
+    ingredients = recipe.get("RecipeIngredientParts", [])
+    if isinstance(ingredients, str):
+        return [ingredients]
+    if isinstance(ingredients, list):
+        return ingredients
+    return []
+
+
+def _store_recipe_results(results: list, title: str, key_prefix: str) -> None:
+    st.session_state.custom_search_results = results
+    st.session_state.custom_search_title = title
+    st.session_state.custom_search_key = key_prefix
+
+
+def render_recipe_results(results: list, title: str, key_prefix: str) -> None:
+    if not results:
+        return
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown(f'<div class="card-title">{escape_html(title, 220)}</div>', unsafe_allow_html=True)
+
+    auth_token = st.session_state.get('auth_token')
+    for idx, recipe in enumerate(results):
+        if not isinstance(recipe, dict):
+            continue
+        name = recipe.get("Name", "Recipe")
+        name_html = escape_html(name, 120)
+        cal = int(_recipe_number(recipe, "Calories"))
+        pro = round(_recipe_number(recipe, "ProteinContent"), 1)
+        carb = round(_recipe_number(recipe, "CarbohydrateContent"), 1)
+        fat_val = round(_recipe_number(recipe, "FatContent"), 1)
+
+        st.markdown(f"""
+        <div class="recipe-card">
+            <div class="recipe-name">🍽️ {name_html}</div>
+            <div class="recipe-nutrients">
+                <span class="nutrient-badge calories">🔥 {cal} kcal</span>
+                <span class="nutrient-badge">💪 {pro}g protein</span>
+                <span class="nutrient-badge">🌾 {carb}g carbs</span>
+                <span class="nutrient-badge">🥑 {fat_val}g fat</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        recipe_ings = _recipe_ingredients(recipe)[:5]
+        if recipe_ings:
+            with st.expander(f"📜 Ingredients for {str(name)[:25]}..."):
+                for ing in recipe_ings:
+                    st.markdown(f"• {escape_html(ing, 120)}")
+
+        if auth_token:
+            save_col, track_col = st.columns(2)
+            with save_col:
+                if st.button("⭐ Save", key=f"save_{key_prefix}_{idx}", width="stretch"):
+                    result_save = APIClient.save_meal(
+                        meal_name=str(name), calories=float(cal),
+                        protein=float(pro), carbs=float(carb), fat=float(fat_val),
+                        meal_type="saved", auth_token=auth_token,
+                        recipe_data=recipe,
+                    )
+                    handle_auth_expired(result_save)
+                    if result_save["success"]:
+                        st.success(f"⭐ Saved: {str(name)[:30]}")
+                    else:
+                        st.error(result_save.get("error", "Failed to save"))
+            with track_col:
+                if st.button("➕ Track", key=f"track_{key_prefix}_{idx}", width="stretch"):
+                    track_result = add_tracked_meal_to_session(str(name), cal, pro, carb, fat_val)
+                    if track_result.get("success"):
+                        st.success(f"Added to Macro Tracker: {str(name)[:30]}")
+                        if not track_result.get("cloud_synced") and auth_token:
+                            st.info("Backend is unavailable, so this meal is tracked locally for this session.")
+                        if hasattr(st, "page_link"):
+                            st.page_link("pages/4_📊_Macro_Tracker.py", label="Open Macro Tracker")
+                    else:
+                        st.error(track_result.get("error", "Could not add to tracker"))
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════
 # NUTRITION SEARCH
@@ -343,7 +445,7 @@ if st.session_state.search_mode == "nutrition":
         
         num_results = st.slider("Number of results", 3, 10, 5)
         
-        search_btn = st.form_submit_button("🔍 Find Recipes", use_container_width=True)
+        search_btn = st.form_submit_button("🔍 Find Recipes", width="stretch")
     
     st.markdown('</div>', unsafe_allow_html=True)
     
@@ -359,64 +461,29 @@ if st.session_state.search_mode == "nutrition":
                     results = result["data"].get("output", [])
                     
                     if results:
-                        st.markdown('<div class="card">', unsafe_allow_html=True)
-                        st.markdown(f'<div class="card-title">✅ Found {len(results)} Matching Recipes</div>', unsafe_allow_html=True)
-                        
-                        for idx, recipe in enumerate(results):
-                            r_name = recipe.get('Name', 'Recipe')
-                            r_name_html = escape_html(r_name, 120)
-                            r_cal = int(recipe.get('Calories', 0))
-                            r_pro = int(recipe.get('ProteinContent', 0))
-                            r_carb = int(recipe.get('CarbohydrateContent', 0))
-                            r_fat = int(recipe.get('FatContent', 0))
-                            
-                            st.markdown(f"""
-                            <div class="recipe-card">
-                                <div class="recipe-name">🍽️ {r_name_html}</div>
-                                <div class="recipe-nutrients">
-                                    <span class="nutrient-badge calories">🔥 {r_cal} kcal</span>
-                                    <span class="nutrient-badge">💪 {r_pro}g protein</span>
-                                    <span class="nutrient-badge">🌾 {r_carb}g carbs</span>
-                                    <span class="nutrient-badge">🥑 {r_fat}g fat</span>
-                                </div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            auth_token = st.session_state.get('auth_token')
-                            if auth_token:
-                                save_col, track_col = st.columns(2)
-                                with save_col:
-                                    if st.button(f"⭐ Save", key=f"save_custom_{idx}", use_container_width=True):
-                                        result_save = APIClient.save_meal(
-                                            meal_name=r_name, calories=float(r_cal),
-                                            protein=float(r_pro), carbs=float(r_carb), fat=float(r_fat),
-                                            meal_type="saved", auth_token=auth_token
-                                        )
-                                        handle_auth_expired(result_save)
-                                        if result_save["success"]:
-                                            st.success(f"⭐ Saved: {r_name[:30]}")
-                                        else:
-                                            st.error(result_save.get("error", "Failed to save"))
-                                with track_col:
-                                    if st.button("➕ Track", key=f"track_custom_{idx}", use_container_width=True):
-                                        track_result = add_tracked_meal_to_session(r_name, r_cal, r_pro, r_carb, r_fat)
-                                        if track_result.get("success"):
-                                            st.success(f"Added to Macro Tracker: {r_name[:30]}")
-                                            if hasattr(st, "page_link"):
-                                                st.page_link("pages/4_📊_Macro_Tracker.py", label="Open Macro Tracker")
-                                        else:
-                                            st.error(track_result.get("error", "Could not add to tracker"))
-                        
-                        st.markdown('</div>', unsafe_allow_html=True)
+                        _store_recipe_results(
+                            results,
+                            f"✅ Found {len(results)} Matching Recipes",
+                            "nutrition",
+                        )
                     else:
+                        _store_recipe_results([], "", "nutrition")
                         st.warning("No recipes found. Try adjusting your targets.")
                 else:
+                    _store_recipe_results([], "", "nutrition")
                     st.error("⚠️ **Backend unavailable.** Start the API server for ML-powered recommendations.")
                     st.info("💡 Run `uvicorn main:app --port 8080` in the FastAPI_Backend folder.")
                     
             except Exception as e:
+                _store_recipe_results([], "", "nutrition")
                 st.error("⚠️ **Backend unavailable.** Start the API server for ML-powered recommendations.")
                 st.caption(f"Detail: {str(e)[:100]}")
+
+    render_recipe_results(
+        st.session_state.get("custom_search_results", []),
+        st.session_state.get("custom_search_title", ""),
+        st.session_state.get("custom_search_key", "nutrition"),
+    )
 
 # ═══════════════════════════════════════════════════════════════
 # INGREDIENT SEARCH
@@ -438,7 +505,7 @@ else:
     with col2:
         num_results = st.slider("Results to show", 3, 10, 5)
     
-    if st.button("🔍 Search Recipes", use_container_width=True):
+    if st.button("🔍 Search Recipes", width="stretch"):
         if ingredients_input:
             ingredients_list = [i.strip() for i in ingredients_input.split(",") if i.strip()]
             
@@ -451,70 +518,26 @@ else:
                 if result["success"]:
                     results = result["data"].get("output", [])
                     if results:
-                        ingredients_title = escape_html(", ".join(ingredients_list), 180)
-                        st.markdown('<div class="card">', unsafe_allow_html=True)
-                        st.markdown(f'<div class="card-title">✅ {len(results)} ML-Matched Recipes for: {ingredients_title}</div>', unsafe_allow_html=True)
-                        
-                        for idx, recipe in enumerate(results):
-                            name = recipe.get("Name", "Recipe")
-                            name_html = escape_html(name, 120)
-                            cal = int(recipe.get("Calories", 0))
-                            pro = round(recipe.get("ProteinContent", 0), 1)
-                            carb = round(recipe.get("CarbohydrateContent", 0), 1)
-                            fat_val = round(recipe.get("FatContent", 0), 1)
-                            
-                            st.markdown(f"""
-                            <div class="recipe-card">
-                                <div class="recipe-name">🍽️ {name_html}</div>
-                                <div class="recipe-nutrients">
-                                    <span class="nutrient-badge calories">🔥 {cal} kcal</span>
-                                    <span class="nutrient-badge">💪 {pro}g protein</span>
-                                    <span class="nutrient-badge">🌾 {carb}g carbs</span>
-                                    <span class="nutrient-badge">🥑 {fat_val}g fat</span>
-                                </div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # Show ingredients
-                            recipe_ings = recipe.get("RecipeIngredientParts", [])[:5]
-                            if recipe_ings:
-                                with st.expander(f"📜 Ingredients for {name[:25]}..."):
-                                    for ing in recipe_ings:
-                                        st.markdown(f"• {ing}")
-                            
-                            # Save button
-                            auth_token = st.session_state.get('auth_token')
-                            if auth_token:
-                                save_col, track_col = st.columns(2)
-                                with save_col:
-                                    if st.button(f"⭐ Save", key=f"save_ing_{idx}", use_container_width=True):
-                                        result_save = APIClient.save_meal(
-                                            meal_name=name, calories=float(cal),
-                                            protein=float(pro), carbs=float(carb), fat=float(fat_val),
-                                            meal_type="saved", auth_token=auth_token
-                                        )
-                                        handle_auth_expired(result_save)
-                                        if result_save["success"]:
-                                            st.success(f"⭐ Saved: {name[:30]}")
-                                        else:
-                                            st.error(result_save.get("error", "Failed to save"))
-                                with track_col:
-                                    if st.button("➕ Track", key=f"track_ing_{idx}", use_container_width=True):
-                                        track_result = add_tracked_meal_to_session(name, cal, pro, carb, fat_val)
-                                        if track_result.get("success"):
-                                            st.success(f"Added to Macro Tracker: {name[:30]}")
-                                            if hasattr(st, "page_link"):
-                                                st.page_link("pages/4_📊_Macro_Tracker.py", label="Open Macro Tracker")
-                                        else:
-                                            st.error(track_result.get("error", "Could not add to tracker"))
-                        
-                        st.markdown('</div>', unsafe_allow_html=True)
+                        _store_recipe_results(
+                            results,
+                            f"✅ {len(results)} ML-Matched Recipes for: {', '.join(ingredients_list)}",
+                            "ingredients",
+                        )
                     else:
+                        _store_recipe_results([], "", "ingredients")
                         st.warning("No recipes found matching those ingredients. Try different combinations.")
                 else:
+                    _store_recipe_results([], "", "ingredients")
                     st.error("⚠️ **Backend unavailable.** Start the API server for ingredient-based search.")
                     st.info("💡 Run `uvicorn main:app --port 8080` in the FastAPI_Backend folder.")
         else:
+            _store_recipe_results([], "", "ingredients")
             st.warning("Please enter some ingredients to search.")
     
     st.markdown('</div>', unsafe_allow_html=True)
+
+    render_recipe_results(
+        st.session_state.get("custom_search_results", []),
+        st.session_state.get("custom_search_title", ""),
+        st.session_state.get("custom_search_key", "ingredients"),
+    )

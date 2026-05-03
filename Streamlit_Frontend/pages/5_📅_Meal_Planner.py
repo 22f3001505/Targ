@@ -391,7 +391,7 @@ with st.sidebar:
     st.caption("Plan your week with balanced, nutritious meals.")
     st.markdown("---")
     
-    if st.button("🎲 Randomize Week", use_container_width=True):
+    if st.button("🎲 Randomize Week", width="stretch"):
         for day in DAYS:
             for slot, _, _ in MEAL_SLOTS:
                 st.session_state[f"{day}_{slot}"] = random.choice(meal_options(slot))
@@ -571,7 +571,7 @@ with grocery_col:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # Print button
-if st.button("🖨️ Print Grocery List", use_container_width=True):
+if st.button("🖨️ Print Grocery List", width="stretch"):
     grocery_text = "\n".join([f"☐ {item}" for item in sorted(weekly_totals["ingredients"])])
     st.text_area("Copy this list:", grocery_text, height=200)
     st.success("✅ Grocery list ready to print!")
@@ -584,7 +584,7 @@ auth_token = st.session_state.get('auth_token')
 if auth_token:
     save_col, load_col = st.columns(2)
     with save_col:
-        if st.button("💾 Save Plan to Account", use_container_width=True, type="primary"):
+        if st.button("💾 Save Plan to Account", width="stretch", type="primary"):
             plan_data = {}
             for day in DAYS:
                 plan_data[day] = {}
@@ -600,7 +600,7 @@ if auth_token:
                 st.error(result.get("error", "Failed to save plan"))
     
     with load_col:
-        if st.button("📥 Load Saved Plan", use_container_width=True):
+        if st.button("📥 Load Saved Plan", width="stretch"):
             result = APIClient.get_meal_plan(auth_token)
             handle_auth_expired(result)
             if result["success"] and result["data"] and result["data"].get("plan_data"):

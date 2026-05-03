@@ -7,10 +7,18 @@ import plotly.graph_objects as go
 import requests
 import time
 from pathlib import Path
-from api import APIClient, BASE_URL
+from api import APIClient, BASE_URL, HealthCalculator
 from ui.safe import escape_html
 from ui.polish import inject_ui_polish
-from ui.ux import add_workout_to_session, handle_auth_expired, render_flow_status, require_login, sync_workout_history_from_api
+from ui.ux import (
+    add_workout_to_session,
+    handle_auth_expired,
+    normalize_bmi_category,
+    normalize_daily_calories,
+    render_flow_status,
+    require_login,
+    sync_workout_history_from_api,
+)
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -335,7 +343,7 @@ with input_col:
         )
         
         st.markdown("<br>", unsafe_allow_html=True)
-        analyze_btn = st.form_submit_button("🔍 Analyze & Get Plan", use_container_width=True)
+        analyze_btn = st.form_submit_button("🔍 Analyze & Get Plan", width="stretch")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -377,7 +385,10 @@ if analyze_btn:
 with results_col:
     if st.session_state.workout_data:
         data = st.session_state.workout_data
-        category = data["bmi_category"]["category"]
+        bmi_info = normalize_bmi_category(data.get("bmi_category"), data.get("bmi"))
+        category = bmi_info["category"]
+        cals = normalize_daily_calories(data.get("daily_calories"))
+        bmi_value = float(data.get("bmi", 0) or 0)
         
         # ─── BMI GAUGE ───
         st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -386,7 +397,7 @@ with results_col:
         # Plotly Gauge
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
-            value=data["bmi"],
+            value=bmi_value,
             domain={'x': [0, 1], 'y': [0, 1]},
             title={'text': "Body Mass Index", 'font': {'size': 18, 'family': 'Inter', 'color': '#333'}},
             number={'font': {'size': 48, 'color': '#2E7D32', 'family': 'Inter'}},
@@ -402,7 +413,7 @@ with results_col:
                     {'range': [25, 30], 'color': "#FBE9E7"},
                     {'range': [30, 40], 'color': "#FFEBEE"}
                 ],
-                'threshold': {'line': {'color': "#2E7D32", 'width': 4}, 'thickness': 0.8, 'value': data["bmi"]}
+                'threshold': {'line': {'color': "#2E7D32", 'width': 4}, 'thickness': 0.8, 'value': bmi_value}
             }
         ))
         fig.update_layout(
@@ -411,14 +422,14 @@ with results_col:
             paper_bgcolor='rgba(0,0,0,0)',
             margin=dict(l=20, r=20, t=40, b=20)
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         
         # Category badge
         bmi_class = f"bmi-{category.lower()}"
         st.markdown(f"""
         <div style="text-align: center;">
             <span class="bmi-badge {escape_html(bmi_class)}">{escape_html(category)}</span>
-            <p style="color: #666; margin-top: 8px;">{escape_html(data["bmi_category"]["status"])}</p>
+            <p style="color: #666; margin-top: 8px;">{escape_html(bmi_info["status"])}</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -428,7 +439,6 @@ with results_col:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">🎯 Daily Calorie Targets</div>', unsafe_allow_html=True)
         
-        cals = data["daily_calories"]
         st.markdown(f"""
         <div class="calorie-grid">
             <div class="calorie-card">
@@ -453,14 +463,22 @@ with results_col:
         st.markdown('</div>', unsafe_allow_html=True)
         
         # ─── WORKOUT PLAN ───
-        workout = data["workout_plan"]
+        fallback_workout = HealthCalculator.get_workout_plan(category)
+        workout_data = data.get("workout_plan") if isinstance(data.get("workout_plan"), dict) else {}
+        workout = {
+            "focus": workout_data.get("focus") or fallback_workout.get("focus", "Balanced Fitness"),
+            "exercises": workout_data.get("exercises") or fallback_workout.get("exercises", []),
+            "tips": workout_data.get("tips") or fallback_workout.get(
+                "tips", "Keep your plan consistent and adjust intensity gradually."
+            ),
+        }
         
         st.markdown(f"""
         <div class="workout-card">
-            <div class="workout-focus">🎯 {escape_html(workout["focus"])}</div>
+            <div class="workout-focus">🎯 {escape_html(workout.get("focus", "Balanced Fitness"))}</div>
         """, unsafe_allow_html=True)
         
-        for i, ex in enumerate(workout["exercises"], 1):
+        for i, ex in enumerate(workout.get("exercises", []), 1):
             st.markdown(f"""
             <div class="exercise-item">
                 <div class="exercise-number">{i}</div>
@@ -473,7 +491,7 @@ with results_col:
         # Tips
         st.markdown(f"""
         <div class="tips-box">
-            <strong>💡 Pro Tip:</strong> {escape_html(workout["tips"])}
+            <strong>💡 Pro Tip:</strong> {escape_html(workout.get("tips", "Keep your plan consistent and adjust intensity gradually."))}
         </div>
         """, unsafe_allow_html=True)
         
@@ -528,7 +546,7 @@ with results_col:
             with ec2:
                 ex_duration = st.number_input("Duration (min)", 5, 180, 30, step=5, key="ex_dur")
             
-            if st.button("🔥 Calculate Calories", use_container_width=True, key="calc_cal_btn"):
+            if st.button("🔥 Calculate Calories", width="stretch", key="calc_cal_btn"):
                 cal_result = APIClient.estimate_exercise_calories(selected_exercise, float(ex_weight), ex_duration)
                 if cal_result["success"] and cal_result["data"]:
                     d = cal_result["data"]
@@ -562,7 +580,7 @@ with results_col:
                     wo_calories = st.number_input("Calories Burned", 50, 2000, int(est_cals), step=25)
                 wo_notes = st.text_input("Notes (optional)", placeholder="e.g., Felt good, increased weight")
                 
-                if st.form_submit_button("✅ Log This Workout", use_container_width=True):
+                if st.form_submit_button("✅ Log This Workout", width="stretch"):
                     result = APIClient.log_workout(
                         workout_focus=workout["focus"],
                         exercises=workout["exercises"],

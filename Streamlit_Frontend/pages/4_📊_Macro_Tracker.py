@@ -10,7 +10,7 @@ from pathlib import Path
 from api import APIClient, BASE_URL
 from ui.polish import inject_ui_polish
 from ui.safe import escape_html
-from ui.ux import add_tracked_meal_to_session, handle_auth_expired, render_flow_status, require_login
+from ui.ux import add_tracked_meal_to_session, handle_auth_expired, render_flow_status, require_login, sync_water_from_api
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -400,7 +400,7 @@ with left_col:
         carbs_goal = st.number_input("Carbs (g)", 100, 500, st.session_state.daily_goals["carbs"], step=10)
         fat_goal = st.number_input("Fat (g)", 30, 200, st.session_state.daily_goals["fat"], step=5)
         
-        if st.form_submit_button("💾 Save Goals", use_container_width=True):
+        if st.form_submit_button("💾 Save Goals", width="stretch"):
             st.session_state.daily_goals = {"calories": cal_goal, "protein": protein_goal, "carbs": carbs_goal, "fat": fat_goal}
             st.session_state.daily_goals_custom = True
             st.session_state.daily_goals_source_calories = None
@@ -423,7 +423,7 @@ with left_col:
             meal_carbs = st.number_input("Carbs (g)", 0, 150, 40, step=1)
             meal_fat = st.number_input("Fat (g)", 0, 80, 15, step=1)
         
-        if st.form_submit_button("➕ Add Meal", use_container_width=True):
+        if st.form_submit_button("➕ Add Meal", width="stretch"):
             if meal_name:
                 result = add_tracked_meal(meal_name, meal_cal, meal_protein, meal_carbs, meal_fat)
                 if result.get("success"):
@@ -440,7 +440,7 @@ with left_col:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">⚡ Quick Add</div>', unsafe_allow_html=True)
     for idx, (name, cal, pro, carbs, fat) in enumerate(QUICK_MEALS):
-        if st.button(f"{name} · {cal} kcal · {pro}g pro", use_container_width=True, key=f"quick_meal_{idx}"):
+        if st.button(f"{name} · {cal} kcal · {pro}g pro", width="stretch", key=f"quick_meal_{idx}"):
             result = add_tracked_meal(name, cal, pro, carbs, fat)
             if result.get("success"):
                 st.success(f"✅ Added: {name}")
@@ -520,7 +520,7 @@ with right_col:
             }]
         )
         
-        st.plotly_chart(fig_donut, use_container_width=True)
+        st.plotly_chart(fig_donut, width="stretch")
         st.markdown('</div>', unsafe_allow_html=True)
     
     with chart_col2:
@@ -577,7 +577,7 @@ with right_col:
             """, unsafe_allow_html=True)
             delete_col, _ = st.columns([1, 5])
             with delete_col:
-                if st.button("🗑 Delete", key=f"delete_meal_{meal.get('id') or meal_index}", use_container_width=True):
+                if st.button("🗑 Delete", key=f"delete_meal_{meal.get('id') or meal_index}", width="stretch"):
                     result = delete_logged_meal(meal_index)
                     if result.get("success"):
                         st.success("Meal deleted.")
@@ -589,14 +589,14 @@ with right_col:
             st.session_state.confirm_clear_meals = False
 
         if not st.session_state.confirm_clear_meals:
-            if st.button("🗑️ Clear All Meals", use_container_width=True):
+            if st.button("🗑️ Clear All Meals", width="stretch"):
                 st.session_state.confirm_clear_meals = True
                 st.rerun()
         else:
             st.warning("Clear today's meal log? This cannot be undone.")
             confirm_col, cancel_col = st.columns(2)
             with confirm_col:
-                if st.button("Yes, clear meals", use_container_width=True):
+                if st.button("Yes, clear meals", width="stretch"):
                     auth_token = st.session_state.get('auth_token')
                     if auth_token:
                         clear_result = APIClient.clear_tracked_meals(auth_token)
@@ -609,7 +609,7 @@ with right_col:
                     st.session_state.confirm_clear_meals = False
                     st.rerun()
             with cancel_col:
-                if st.button("Cancel", use_container_width=True):
+                if st.button("Cancel", width="stretch"):
                     st.session_state.confirm_clear_meals = False
                     st.rerun()
     else:
@@ -684,7 +684,7 @@ with search_col:
                 if st.button(
                     f"➕ {food_name} · {int(food['calories'])} kcal",
                     key=f"popular_food_{i}",
-                    use_container_width=True
+                    width="stretch"
                 ):
                     add_result = add_tracked_meal(food["name"], food["calories"], food["protein"], food["carbs"], food["fat"])
                     if add_result.get("success"):
@@ -718,10 +718,39 @@ if 'water_glasses' not in st.session_state:
         water_data = APIClient.get_water(auth_token)
         handle_auth_expired(water_data)
         if water_data["success"]:
-            st.session_state.water_glasses = water_data["data"].get("glasses", 0)
+            sync_water_from_api(water_data["data"])
+
+
+def set_water_glasses(glasses: int) -> dict:
+    target_glasses = min(40, max(0, int(glasses)))
+    if auth_token:
+        water_result = APIClient.set_water(glasses=target_glasses, auth_token=auth_token)
+        handle_auth_expired(water_result)
+        if water_result.get("success"):
+            sync_water_from_api(water_result.get("data"))
+            return {"success": True, "cloud_synced": True}
+        if water_result.get("error") not in ("Connection failed", "Cannot connect to backend."):
+            return water_result
+
+    st.session_state.water_glasses = target_glasses
+    return {"success": True, "cloud_synced": False}
+
+
+def apply_water_change(glasses: int) -> None:
+    result = set_water_glasses(glasses)
+    if not result.get("success"):
+        st.error(result.get("error", "Could not update water"))
+        st.stop()
+    if auth_token and not result.get("cloud_synced"):
+        st.session_state.water_sync_notice = "Backend is unavailable, so water was saved locally for this session."
+    st.rerun()
 
 water_goal = 10  # glasses (2.5L)
 water_pct = min(100, round(st.session_state.water_glasses / water_goal * 100))
+
+water_notice = st.session_state.pop("water_sync_notice", None)
+if water_notice:
+    st.info(water_notice)
 
 w1, w2, w3, w4, w5 = st.columns([2, 1, 1, 1, 1])
 with w1:
@@ -740,60 +769,17 @@ with w1:
     """, unsafe_allow_html=True)
 
 with w2:
-    if st.button("➖ -1 Glass", use_container_width=True):
-        target_glasses = max(0, st.session_state.water_glasses - 1)
-        if auth_token:
-            water_result = APIClient.set_water(glasses=target_glasses, auth_token=auth_token)
-            handle_auth_expired(water_result)
-            if water_result.get("success"):
-                st.session_state.water_glasses = water_result["data"].get("glasses", target_glasses)
-            else:
-                st.error(water_result.get("error", "Could not update water"))
-                st.stop()
-        else:
-            st.session_state.water_glasses = target_glasses
-        st.rerun()
+    if st.button("➖ -1 Glass", width="stretch"):
+        apply_water_change(st.session_state.water_glasses - 1)
 
 with w3:
-    if st.button("💧 +1 Glass", use_container_width=True):
-        target_glasses = min(40, st.session_state.water_glasses + 1)
-        if auth_token:
-            water_result = APIClient.set_water(glasses=target_glasses, auth_token=auth_token)
-            handle_auth_expired(water_result)
-            if water_result.get("success"):
-                st.session_state.water_glasses = water_result["data"].get("glasses", target_glasses)
-            else:
-                st.error(water_result.get("error", "Could not update water"))
-                st.stop()
-        else:
-            st.session_state.water_glasses = target_glasses
-        st.rerun()
+    if st.button("💧 +1 Glass", width="stretch"):
+        apply_water_change(st.session_state.water_glasses + 1)
 
 with w4:
-    if st.button("💧 +2 Glasses", use_container_width=True):
-        target_glasses = min(40, st.session_state.water_glasses + 2)
-        if auth_token:
-            water_result = APIClient.set_water(glasses=target_glasses, auth_token=auth_token)
-            handle_auth_expired(water_result)
-            if water_result.get("success"):
-                st.session_state.water_glasses = water_result["data"].get("glasses", target_glasses)
-            else:
-                st.error(water_result.get("error", "Could not update water"))
-                st.stop()
-        else:
-            st.session_state.water_glasses = target_glasses
-        st.rerun()
+    if st.button("💧 +2 Glasses", width="stretch"):
+        apply_water_change(st.session_state.water_glasses + 2)
 
 with w5:
-    if st.button("↺ Reset", use_container_width=True):
-        if auth_token:
-            water_result = APIClient.set_water(glasses=0, auth_token=auth_token)
-            handle_auth_expired(water_result)
-            if water_result.get("success"):
-                st.session_state.water_glasses = 0
-            else:
-                st.error(water_result.get("error", "Could not reset water"))
-                st.stop()
-        else:
-            st.session_state.water_glasses = 0
-        st.rerun()
+    if st.button("↺ Reset", width="stretch"):
+        apply_water_change(0)

@@ -74,9 +74,10 @@ def _link_to_page(path: str, label: str, *, key: str) -> None:
         try:
             st.page_link(path, label=label)
             return
-        except KeyError:
-            pass
-    if st.button(label, key=key, use_container_width=True):
+        except Exception as exc:
+            if exc.__class__.__name__ not in ("KeyError", "StreamlitPageNotFoundError"):
+                raise
+    if st.button(label, key=key, width="stretch"):
         st.switch_page(path)
 
 
@@ -92,6 +93,55 @@ def _coerce_int(value: object, default: int = 0) -> int:
         return int(value or default)
     except (TypeError, ValueError):
         return default
+
+
+def _coerce_float(value: object, default: float = 0) -> float:
+    try:
+        return float(value if value is not None else default)
+    except (TypeError, ValueError):
+        return default
+
+
+def normalize_bmi_category(category_data: dict | None, bmi: object = None) -> dict:
+    """Return a complete BMI category payload for older or partial saved sessions."""
+    category_data = category_data if isinstance(category_data, dict) else {}
+    category = category_data.get("category")
+    if not category:
+        bmi_value = _coerce_float(bmi, 22)
+        if bmi_value < 18.5:
+            category = "Underweight"
+        elif bmi_value < 25:
+            category = "Normal"
+        elif bmi_value < 30:
+            category = "Overweight"
+        else:
+            category = "Obese"
+
+    fallback_status = {
+        "Underweight": "Below healthy range",
+        "Normal": "Healthy weight",
+        "Overweight": "Above healthy range",
+        "Obese": "High health risk",
+    }
+    return {
+        "category": str(category),
+        "status": str(category_data.get("status") or fallback_status.get(str(category), "Health range ready")),
+    }
+
+
+def normalize_daily_calories(calories: dict | None, default_maintenance: int = 2000) -> dict:
+    """Return a complete calorie target set from a partial backend/session payload."""
+    calories = calories if isinstance(calories, dict) else {}
+    maintenance = _coerce_int(calories.get("maintenance"), default_maintenance)
+    defaults = {
+        "maintenance": maintenance,
+        "mild_loss": round(maintenance * 0.9),
+        "weight_loss": round(maintenance * 0.8),
+        "extreme_loss": round(maintenance * 0.6),
+        "mild_gain": round(maintenance * 1.1),
+        "weight_gain": round(maintenance * 1.2),
+    }
+    return {key: _coerce_int(calories.get(key), value) for key, value in defaults.items()}
 
 
 def _ensure_meal_log_state() -> None:
