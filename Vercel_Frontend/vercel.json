@@ -4,6 +4,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api",
+      "destination": "https://targ-api.onrender.com/"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://targ-api.onrender.com/:path*"
     },

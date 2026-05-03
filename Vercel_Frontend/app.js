@@ -156,9 +156,9 @@ function nextHint(complete) {
 
 async function checkApi() {
   try {
-    const data = await api("/");
+    const data = await api("/ready");
     document.querySelector("#apiStatus").textContent = "Online";
-    document.querySelector("#apiMeta").textContent = `${data.api_name || "TARG API"} v${data.version || ""}`;
+    document.querySelector("#apiMeta").textContent = `TARG API v${data.version || ""}`;
   } catch {
     document.querySelector("#apiStatus").textContent = "Offline";
     document.querySelector("#apiMeta").textContent = "Using local fallbacks where possible";
