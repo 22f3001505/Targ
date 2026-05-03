@@ -1,5 +1,6 @@
 """Shared Streamlit UX helpers for auth and session flow."""
 import streamlit as st
+from api import APIClient
 
 
 AUTH_PAGE = "pages/0_🔐_Account.py"
@@ -14,14 +15,48 @@ USER_SESSION_KEYS = (
     "workout_data",
     "meals_logged",
     "totals",
+    "daily_goals",
+    "water_glasses",
+    "confirm_clear_meals",
+    "meal_plan_autoloaded",
+    "auth_session_checked",
     "auth_redirect_target",
     "auth_redirect_message",
 )
 
 
+def ensure_session_fresh() -> bool:
+    """Refresh the saved web token once per Streamlit session, keeping temporary offline sessions usable."""
+    token = st.session_state.get("auth_token")
+    if not token:
+        return False
+    if st.session_state.get("auth_session_checked"):
+        return True
+
+    result = APIClient.refresh_token(token)
+    if result.get("success"):
+        data = result["data"]
+        st.session_state.auth_token = data.get("access_token", token)
+        st.session_state.user_data = data.get("user", st.session_state.get("user_data"))
+        st.session_state.auth_session_checked = True
+        return True
+
+    if result.get("auth_expired"):
+        clear_user_session()
+        st.session_state.auth_redirect_message = "Your session expired. Please sign in again to continue."
+        st.switch_page(AUTH_PAGE)
+
+    if result.get("connection_error"):
+        st.session_state.auth_session_checked = True
+        return True
+
+    return True
+
+
 def require_login(target_page: str, message: str | None = None) -> None:
     """Redirect unauthenticated users to Account while remembering their target."""
     if st.session_state.get("auth_token"):
+        ensure_session_fresh()
         return
 
     st.session_state.auth_redirect_target = target_page

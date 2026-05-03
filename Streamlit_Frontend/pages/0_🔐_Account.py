@@ -8,7 +8,7 @@ from pathlib import Path
 from api import APIClient
 from ui.polish import inject_ui_polish
 from ui.safe import escape_html
-from ui.ux import clear_user_session, consume_auth_redirect, handle_auth_expired, render_auth_redirect_notice
+from ui.ux import clear_user_session, consume_auth_redirect, ensure_session_fresh, handle_auth_expired, render_auth_redirect_notice
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -114,6 +114,9 @@ if 'auth_token' not in st.session_state:
 if 'user_data' not in st.session_state:
     st.session_state.user_data = None
 
+if st.session_state.auth_token:
+    ensure_session_fresh()
+
 # ═══════════════════════════════════════════════════════════════
 # SIDEBAR
 # ═══════════════════════════════════════════════════════════════
@@ -184,6 +187,38 @@ if st.session_state.auth_token:
         sc1.metric("🔬 Health Analyses", stats.get("total_health_analyses", 0))
         sc2.metric("🍽️ Saved Meals", stats.get("total_saved_meals", 0))
         sc3.metric("🏋️ Workouts", stats.get("total_workouts", 0))
+
+    # Synced daily water and tracked meals, matching the Android account overview.
+    st.markdown("---")
+    st.markdown("### 💧 Today’s Water")
+    water = APIClient.get_water(st.session_state.auth_token)
+    handle_auth_expired(water)
+    if water["success"]:
+        wd = water["data"]
+        glasses = int(wd.get("glasses", 0))
+        goal_ml = int(wd.get("goal_ml", 2500) or 2500)
+        pct = int(wd.get("percent", 0) or 0)
+        st.progress(min(max(pct, 0), 100) / 100)
+        st.caption(f"{glasses} glasses · {glasses * 250}ml / {goal_ml}ml")
+    else:
+        st.info("Water tracking will appear here after you log it from Macro Tracker.")
+
+    st.markdown("### 🍽️ Recent Tracked Meals")
+    tracked = APIClient.get_saved_meals(st.session_state.auth_token, meal_type="tracked", limit=5)
+    handle_auth_expired(tracked)
+    if tracked["success"] and tracked["data"]:
+        for meal in tracked["data"]:
+            m_name = escape_html(meal.get('meal_name', 'Meal'), 80)
+            m_date = escape_html(str(meal.get('saved_at') or meal.get('created_at', ''))[:16])
+            st.markdown(f"""
+            <div style="background: #FFFFFF; border: 1px solid rgba(76,175,80,0.15); border-radius: 12px; padding: 14px; margin-bottom: 8px; border-left: 4px solid #D9F0DF;">
+                <strong style="color: #000000 !important;">{m_name}</strong>
+                <span style="color: #647067; float: right;">{m_date}</span><br>
+                <span style="color: #647067;">🔥 {int(meal.get('calories', 0))} kcal · 💪 {round(meal.get('protein', 0), 1)}g · 🌾 {round(meal.get('carbs', 0), 1)}g · 🥑 {round(meal.get('fat', 0), 1)}g</span>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("No tracked meals yet. Add meals from the Macro Tracker.")
     
     # Quick actions
     st.markdown("---")
@@ -327,6 +362,7 @@ else:
                         data = result["data"]
                         st.session_state.auth_token = data["access_token"]
                         st.session_state.user_data = data["user"]
+                        st.session_state.auth_session_checked = True
                         st.success("✅ Login successful!")
                         st.switch_page(consume_auth_redirect())
                     else:
@@ -362,6 +398,7 @@ else:
                         data = result["data"]
                         st.session_state.auth_token = data["access_token"]
                         st.session_state.user_data = data["user"]
+                        st.session_state.auth_session_checked = True
                         st.success("✅ Account created!")
                         st.balloons()
                         st.switch_page(consume_auth_redirect())

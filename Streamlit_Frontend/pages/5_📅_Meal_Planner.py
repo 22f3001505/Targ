@@ -356,6 +356,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 inject_ui_polish()
 
+# Match Android: load the saved cloud plan automatically on first visit.
+auth_token = st.session_state.get('auth_token')
+if auth_token and not st.session_state.get("meal_plan_autoloaded"):
+    saved_plan = APIClient.get_meal_plan(auth_token)
+    handle_auth_expired(saved_plan)
+    if saved_plan.get("success") and saved_plan.get("data") and saved_plan["data"].get("plan_data"):
+        plan = saved_plan["data"]["plan_data"]
+        for day in DAYS:
+            if day in plan:
+                for slot, _, _ in MEAL_SLOTS:
+                    if plan[day].get(slot) is not None:
+                        st.session_state[f"{day}_{slot}"] = resolve_meal_name(slot, plan[day][slot])
+        st.session_state.meal_plan_loaded_at = saved_plan["data"].get("created_at")
+    st.session_state.meal_plan_autoloaded = True
+
 # ═══════════════════════════════════════════════════════════════
 # SIDEBAR
 # ═══════════════════════════════════════════════════════════════

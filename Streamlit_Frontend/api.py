@@ -89,6 +89,48 @@ class APIClient:
             return {"success": False, "error": "Cannot connect to backend."}
         except requests.exceptions.RequestException as exc:
             return {"success": False, "error": str(exc)}
+
+    @staticmethod
+    def refresh_token(auth_token: str) -> Dict[str, Any]:
+        """Refresh the current access token and profile data."""
+        if not auth_token:
+            return {"success": False, "error": "Not authenticated", "auth_expired": True}
+        try:
+            response = requests.post(
+                f"{BASE_URL}/auth/refresh",
+                headers=_auth_headers(auth_token),
+                timeout=REQUEST_TIMEOUT
+            )
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            return _protected_failure(response, "Could not refresh session")
+        except requests.exceptions.Timeout:
+            return {"success": False, "error": "Session refresh timed out.", "connection_error": True}
+        except requests.exceptions.ConnectionError:
+            return {"success": False, "error": "Cannot connect to backend.", "connection_error": True}
+        except requests.exceptions.RequestException as exc:
+            return {"success": False, "error": str(exc), "connection_error": True}
+
+    @staticmethod
+    def get_profile(auth_token: str) -> Dict[str, Any]:
+        """Get the authenticated user's current profile."""
+        if not auth_token:
+            return {"success": False, "error": "Not authenticated", "data": None}
+        try:
+            response = requests.get(
+                f"{BASE_URL}/auth/me",
+                headers=_auth_headers(auth_token),
+                timeout=REQUEST_TIMEOUT
+            )
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            return _protected_failure(response, "Could not load profile", None)
+        except requests.exceptions.Timeout:
+            return {"success": False, "error": "Profile request timed out.", "connection_error": True, "data": None}
+        except requests.exceptions.ConnectionError:
+            return {"success": False, "error": "Cannot connect to backend.", "connection_error": True, "data": None}
+        except requests.exceptions.RequestException as exc:
+            return {"success": False, "error": str(exc), "connection_error": True, "data": None}
     
     # ═══════════════════════════════════════════
     # HEALTH ANALYSIS
@@ -138,15 +180,26 @@ class APIClient:
     # ═══════════════════════════════════════════
     @staticmethod
     def save_meal(meal_name: str, calories: float, protein: float, carbs: float, fat: float,
-                  meal_type: str = "saved", auth_token: str = None) -> Dict[str, Any]:
+                  meal_type: str = "saved", auth_token: str = None,
+                  fiber: float = 0, recipe_data: dict | None = None) -> Dict[str, Any]:
         """Save a meal/recipe to the user's collection."""
         if not auth_token:
             return {"success": False, "error": "Not authenticated"}
         try:
+            payload = {
+                "meal_name": meal_name,
+                "meal_type": meal_type,
+                "calories": calories,
+                "protein": protein,
+                "carbs": carbs,
+                "fat": fat,
+                "fiber": fiber,
+            }
+            if recipe_data is not None:
+                payload["recipe_data"] = recipe_data
             response = requests.post(
                 f"{BASE_URL}/user/meals",
-                json={"meal_name": meal_name, "meal_type": meal_type,
-                      "calories": calories, "protein": protein, "carbs": carbs, "fat": fat},
+                json=payload,
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=5
             )
