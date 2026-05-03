@@ -119,12 +119,12 @@ private fun LoggedInView(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(PrimaryGreen, DarkGreen))),
+                    .background(Brush.linearGradient(listOf(LightMint, PaleGreen))),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = (userData?.username?.firstOrNull()?.uppercase() ?: "T"),
-                    fontSize = 32.sp, fontWeight = FontWeight.Bold, color = White
+                    fontSize = 32.sp, fontWeight = FontWeight.Bold, color = DarkText
                 )
             }
             Spacer(Modifier.height(14.dp))
@@ -256,7 +256,7 @@ private fun AuthForms(viewModel: HealthViewModel, isLoading: Boolean) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Surface(
             shape = RoundedCornerShape(12.dp),
-            color = if (isLogin) PrimaryGreen else White,
+            color = if (isLogin) LightMint else White,
             shadowElevation = if (isLogin) 4.dp else 1.dp,
             onClick = {
                 isLogin = true
@@ -268,12 +268,12 @@ private fun AuthForms(viewModel: HealthViewModel, isLoading: Boolean) {
                 modifier = Modifier.padding(16.dp),
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.SemiBold,
-                color = if (isLogin) White else MediumText
+                color = DarkText
             )
         }
         Surface(
             shape = RoundedCornerShape(12.dp),
-            color = if (!isLogin) PrimaryGreen else White,
+            color = if (!isLogin) LightMint else White,
             shadowElevation = if (!isLogin) 4.dp else 1.dp,
             onClick = {
                 isLogin = false
@@ -285,7 +285,7 @@ private fun AuthForms(viewModel: HealthViewModel, isLoading: Boolean) {
                 modifier = Modifier.padding(16.dp),
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.SemiBold,
-                color = if (!isLogin) White else MediumText
+                color = DarkText
             )
         }
     }

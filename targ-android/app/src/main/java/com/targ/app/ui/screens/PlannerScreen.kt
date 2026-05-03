@@ -119,7 +119,7 @@ fun PlannerScreen(viewModel: HealthViewModel? = null) {
                 val isSelected = selectedDayIndex == i
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) PrimaryGreen else White,
+                    color = if (isSelected) LightMint else White,
                     shadowElevation = if (isSelected) 6.dp else 2.dp,
                     onClick = { selectedDayIndex = i },
                     modifier = Modifier.weight(1f)
@@ -129,12 +129,12 @@ fun PlannerScreen(viewModel: HealthViewModel? = null) {
                         modifier = Modifier.padding(vertical = 14.dp)
                     ) {
                         Text(day, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                            color = if (isSelected) White else DarkText)
+                            color = DarkText)
 
                         val dayTotal = getDayCalories(day, selectedBreakfast, selectedLunch, selectedDinner, selectedSnack)
                         Spacer(Modifier.height(2.dp))
                         Text("$dayTotal", fontSize = 10.sp,
-                            color = if (isSelected) White.copy(alpha = 0.8f) else LightText)
+                            color = if (isSelected) MediumText else LightText)
                     }
                 }
             }
@@ -147,7 +147,7 @@ fun PlannerScreen(viewModel: HealthViewModel? = null) {
             // Day header
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = PrimaryGreen,
+                color = LightMint,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -156,12 +156,12 @@ fun PlannerScreen(viewModel: HealthViewModel? = null) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("📆 ${fullDays[selectedDayIndex]}", fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold, color = White)
+                        fontWeight = FontWeight.Bold, color = DarkText)
 
                     val dayTotalCal = getDayCalories(currentDay, selectedBreakfast, selectedLunch, selectedDinner, selectedSnack)
-                    Surface(shape = RoundedCornerShape(20.dp), color = White.copy(alpha = 0.2f)) {
+                    Surface(shape = RoundedCornerShape(20.dp), color = White.copy(alpha = 0.72f)) {
                         Text("🔥 $dayTotalCal kcal", modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            color = White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            color = DarkText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }

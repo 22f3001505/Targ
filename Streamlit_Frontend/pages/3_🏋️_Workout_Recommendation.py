@@ -532,10 +532,10 @@ with results_col:
                     d = cal_result["data"]
                     st.session_state["_est_calories"] = d["calories_burned"]
                     st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); border-radius: 14px; padding: 24px; text-align: center; margin: 12px 0;">
-                        <div style="color: white !important; font-size: 2.5rem; font-weight: 800;">{d['calories_burned']} kcal</div>
-                        <div style="color: rgba(255,255,255,0.9) !important; margin-top: 4px;">{escape_html(d['exercise'])} · {d['duration_minutes']} min · MET {d['met']}</div>
-                        <div style="color: rgba(255,255,255,0.7) !important; font-size: 0.8rem; margin-top: 8px;">Source: {escape_html(d['source'])}</div>
+                    <div class="target-badge" style="background: #D9F0DF; border: 1px solid rgba(47,125,72,0.28); border-radius: 14px; padding: 24px; text-align: center; margin: 12px 0;">
+                        <div style="color: #000000 !important; font-size: 2.5rem; font-weight: 800;">{d['calories_burned']} kcal</div>
+                        <div style="color: #647067 !important; margin-top: 4px;">{escape_html(d['exercise'])} · {d['duration_minutes']} min · MET {d['met']}</div>
+                        <div style="color: #647067 !important; font-size: 0.8rem; margin-top: 8px;">Source: {escape_html(d['source'])}</div>
                     </div>
                     """, unsafe_allow_html=True)
                 else:

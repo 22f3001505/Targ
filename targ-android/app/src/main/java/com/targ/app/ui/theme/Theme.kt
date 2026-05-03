@@ -24,7 +24,7 @@ val AccentBlue = Color(0xFF2563EB)
 val AccentAmber = Color(0xFFD97706)
 val AccentRose = Color(0xFFE11D48)
 
-val DarkText = Color(0xFF243025)
+val DarkText = Color(0xFF000000)
 val MediumText = Color(0xFF647067)
 val LightText = Color(0xFF8C968E)
 
@@ -51,11 +51,11 @@ val CardElevation = 1.dp
 
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryGreen,
-    onPrimary = White,
+    onPrimary = DarkText,
     primaryContainer = LightMint,
     onPrimaryContainer = DarkGreen,
     secondary = AccentTeal,
-    onSecondary = White,
+    onSecondary = DarkText,
     secondaryContainer = PaleGreen,
     background = OffWhite,
     onBackground = DarkText,
@@ -64,7 +64,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = LightGray,
     onSurfaceVariant = MediumText,
     error = BmiObese,
-    onError = White
+    onError = DarkText
 )
 
 private val DarkColorScheme = darkColorScheme(

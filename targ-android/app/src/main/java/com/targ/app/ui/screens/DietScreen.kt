@@ -96,8 +96,9 @@ fun DietScreen(viewModel: HealthViewModel) {
                             onClick = { resultCount = n },
                             label = { Text("$n", fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = PrimaryGreen,
-                                selectedLabelColor = White
+                                labelColor = DarkText,
+                                selectedContainerColor = LightMint,
+                                selectedLabelColor = DarkText
                             )
                         )
                     }

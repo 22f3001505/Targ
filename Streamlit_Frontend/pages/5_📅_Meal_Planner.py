@@ -448,11 +448,11 @@ for i, day in enumerate(DAYS):
             if calorie_target:
                 diff = day_cal - calorie_target
                 if abs(diff) <= 100:
-                    target_badge = f'<span style="background:#4CAF50;color:white;padding:3px 8px;border-radius:8px;font-size:0.75rem;">✅ On Target</span>'
+                    target_badge = f'<span class="target-badge" style="background:#D9F0DF;color:#000000;padding:3px 8px;border-radius:8px;font-size:0.75rem;">✅ On Target</span>'
                 elif diff > 100:
-                    target_badge = f'<span style="background:#FF7043;color:white;padding:3px 8px;border-radius:8px;font-size:0.75rem;">⬆️ +{diff} kcal</span>'
+                    target_badge = f'<span class="target-badge" style="background:#FFE2D8;color:#000000;padding:3px 8px;border-radius:8px;font-size:0.75rem;">⬆️ +{diff} kcal</span>'
                 else:
-                    target_badge = f'<span style="background:#FFA726;color:white;padding:3px 8px;border-radius:8px;font-size:0.75rem;">⬇️ {diff} kcal</span>'
+                    target_badge = f'<span class="target-badge" style="background:#FFF3D6;color:#000000;padding:3px 8px;border-radius:8px;font-size:0.75rem;">⬇️ {diff} kcal</span>'
             
             st.markdown(f"""
             <div class="day-header">

@@ -125,30 +125,30 @@ fun WorkoutScreen(viewModel: HealthViewModel) {
             // Workout Focus Card
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = PrimaryGreen,
+                color = PaleGreen,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Text("🎯 ${data.workoutPlan.focus}", fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold, color = White)
+                        fontWeight = FontWeight.Bold, color = DarkText)
                     Spacer(Modifier.height(20.dp))
 
                     data.workoutPlan.exercises.forEachIndexed { i, exercise ->
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = White.copy(alpha = 0.15f),
+                            color = White,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                         ) {
                             Row(
                                 modifier = Modifier.padding(14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Surface(shape = RoundedCornerShape(50), color = White.copy(alpha = 0.25f)) {
+                                Surface(shape = RoundedCornerShape(50), color = LightMint) {
                                     Text("${i + 1}", modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp),
-                                        fontWeight = FontWeight.Bold, color = White, fontSize = 14.sp)
+                                        fontWeight = FontWeight.Bold, color = DarkText, fontSize = 14.sp)
                                 }
                                 Spacer(Modifier.width(14.dp))
-                                Text(exercise, color = White, fontSize = 15.sp)
+                                Text(exercise, color = DarkText, fontSize = 15.sp)
                             }
                         }
                     }
@@ -178,7 +178,7 @@ fun WorkoutScreen(viewModel: HealthViewModel) {
                         val isRest = activity == "Rest"
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = if (isRest) LightGray else PrimaryGreen,
+                            color = if (isRest) LightGray else LightMint,
                             modifier = Modifier.weight(1f)
                         ) {
                             Column(
@@ -186,7 +186,7 @@ fun WorkoutScreen(viewModel: HealthViewModel) {
                                 modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp)
                             ) {
                                 Text(day, fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                                    color = if (isRest) MediumText else White)
+                                    color = if (isRest) MediumText else DarkText)
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     if (isRest) "😴" else "💪",
@@ -194,7 +194,7 @@ fun WorkoutScreen(viewModel: HealthViewModel) {
                                 )
                                 Spacer(Modifier.height(2.dp))
                                 Text(activity, fontSize = 9.sp,
-                                    color = if (isRest) LightText else White.copy(alpha = 0.85f))
+                                    color = if (isRest) LightText else DarkText)
                             }
                         }
                     }
@@ -372,8 +372,9 @@ private fun ExerciseCalculatorSection(
                     onClick = { onCategoryChange(null) },
                     label = { Text("All", fontSize = 12.sp) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = PrimaryGreen,
-                        selectedLabelColor = White
+                        labelColor = DarkText,
+                        selectedContainerColor = LightMint,
+                        selectedLabelColor = DarkText
                     )
                 )
                 categories.take(6).forEach { cat ->
@@ -382,8 +383,9 @@ private fun ExerciseCalculatorSection(
                         onClick = { onCategoryChange(cat) },
                         label = { Text(cat, fontSize = 12.sp) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PrimaryGreen,
-                            selectedLabelColor = White
+                            labelColor = DarkText,
+                            selectedContainerColor = LightMint,
+                            selectedLabelColor = DarkText
                         )
                     )
                 }
@@ -406,8 +408,9 @@ private fun ExerciseCalculatorSection(
                                 maxLines = 1)
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = DarkGreen,
-                            selectedLabelColor = White
+                            labelColor = DarkText,
+                            selectedContainerColor = LightMint,
+                            selectedLabelColor = DarkText
                         )
                     )
                 }

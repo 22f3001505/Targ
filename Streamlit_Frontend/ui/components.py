@@ -27,7 +27,7 @@ def inject_global_css():
         .stApp {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(180deg, #FFFFFF 0%, #F8FFF8 100%);
-            color: #333333;
+            color: #000000;
         }
         
         #MainMenu, footer, header {visibility: hidden;}
@@ -35,33 +35,34 @@ def inject_global_css():
         
         /* Fix text visibility globally */
         p, span, div, label, h1, h2, h3, h4, h5, h6 {
-            color: #333333 !important;
+            color: #000000 !important;
         }
         .stMarkdown, .stText, .stSelectbox label,
         .stNumberInput label, .stSlider label, .stTextArea label {
-            color: #333333 !important;
+            color: #000000 !important;
         }
         
         /* Page Header */
         .page-header {
-            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            background: linear-gradient(135deg, #D9F0DF 0%, #EFF8F0 64%, #FFFFFF 100%);
             border-radius: 20px;
             padding: 40px;
             text-align: center;
             margin-bottom: 30px;
-            box-shadow: 0 15px 40px rgba(76, 175, 80, 0.25);
+            box-shadow: 0 1px 2px rgba(20, 33, 24, 0.07), 0 10px 28px rgba(20, 33, 24, 0.06);
+            border: 1px solid #D8E3D6;
         }
         .page-header * {
-            color: #FFFFFF !important;
+            color: #000000 !important;
         }
         .page-title {
             font-size: 2.5rem;
             font-weight: 700;
-            color: #FFFFFF !important;
+            color: #000000 !important;
             margin: 0;
         }
         .page-subtitle {
-            color: rgba(255,255,255,0.9) !important;
+            color: #647067 !important;
             margin-top: 8px;
             font-size: 1.1rem;
         }
@@ -84,17 +85,19 @@ def inject_global_css():
         
         /* Buttons */
         .stButton > button {
-            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
-            color: white !important;
-            border: none;
+            background: #D9F0DF;
+            color: #000000 !important;
+            border: 1px solid rgba(47, 125, 72, 0.45);
             border-radius: 10px;
             padding: 12px 24px;
             font-weight: 600;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 1px 2px rgba(20, 33, 24, 0.08);
         }
+        .stButton > button * { color: #000000 !important; }
         .stButton > button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.35);
+            background: #EFF8F0;
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.18);
         }
         
         /* Explanation Box */

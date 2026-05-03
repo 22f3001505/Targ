@@ -157,7 +157,7 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
                 CardTitle("🎯 Daily Goals", "")
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = if (editingGoals) PrimaryGreen else PaleGreen,
+                    color = if (editingGoals) LightMint else PaleGreen,
                     onClick = {
                         if (editingGoals) {
                             calorieGoal = goalCalInput.toIntOrNull() ?: 2000
@@ -172,7 +172,7 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
                         if (editingGoals) "✅ Save" else "✏️ Edit",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         fontSize = 12.sp, fontWeight = FontWeight.Medium,
-                        color = if (editingGoals) White else DarkGreen
+                        color = DarkText
                     )
                 }
             }
@@ -238,7 +238,7 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
                     val isFilled = i <= waterGlasses
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = if (isFilled) PrimaryGreen.copy(alpha = 0.8f) else PaleGreen,
+                        color = if (isFilled) LightMint else PaleGreen,
                         onClick = {
                             waterGlasses = i
                             viewModel?.setWater(glasses = i)
@@ -249,7 +249,7 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
                             Text(
                                 if (isFilled) "💧" else "○",
                                 fontSize = if (isFilled) 18.sp else 14.sp,
-                                color = if (isFilled) White else LightText
+                                color = if (isFilled) DarkText else LightText
                             )
                         }
                     }
@@ -279,7 +279,7 @@ fun MacroScreen(viewModel: HealthViewModel? = null) {
                         Text("➖", modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                     }
                     Surface(
-                        shape = RoundedCornerShape(8.dp), color = PrimaryGreen,
+                        shape = RoundedCornerShape(8.dp), color = LightMint,
                         onClick = {
                             if (waterGlasses < 40) {
                                 val next = waterGlasses + 1

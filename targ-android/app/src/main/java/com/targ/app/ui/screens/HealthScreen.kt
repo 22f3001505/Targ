@@ -92,8 +92,9 @@ fun HealthScreen(viewModel: HealthViewModel) {
                         onClick = { selectedGender = g },
                         label = { Text(g.replaceFirstChar { it.uppercase() }) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PrimaryGreen,
-                            selectedLabelColor = White
+                            labelColor = DarkText,
+                            selectedContainerColor = LightMint,
+                            selectedLabelColor = DarkText
                         )
                     )
                 }
@@ -113,8 +114,9 @@ fun HealthScreen(viewModel: HealthViewModel) {
                                 fontSize = 12.sp)
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PrimaryGreen,
-                            selectedLabelColor = White
+                            labelColor = DarkText,
+                            selectedContainerColor = LightMint,
+                            selectedLabelColor = DarkText
                         )
                     )
                 }

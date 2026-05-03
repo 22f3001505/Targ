@@ -35,7 +35,7 @@ fun PageHeader(title: String, subtitle: String) {
             .fillMaxWidth()
             .shadow(6.dp, RoundedCornerShape(14.dp))
             .clip(RoundedCornerShape(14.dp))
-            .background(Brush.linearGradient(listOf(AccentTeal, PrimaryGreen, DarkGreen)))
+            .background(Brush.linearGradient(listOf(LightMint, PaleGreen, White)))
             .padding(horizontal = 22.dp, vertical = 24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -45,7 +45,7 @@ fun PageHeader(title: String, subtitle: String) {
                 fontSize = 25.sp,
                 lineHeight = 30.sp,
                 fontWeight = FontWeight.Bold,
-                color = White,
+                color = DarkText,
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(6.dp))
@@ -53,7 +53,7 @@ fun PageHeader(title: String, subtitle: String) {
                 subtitle,
                 fontSize = 13.sp,
                 lineHeight = 19.sp,
-                color = White.copy(alpha = 0.86f),
+                color = MediumText,
                 textAlign = TextAlign.Center
             )
         }
@@ -117,10 +117,10 @@ fun StatCard(
     modifier: Modifier = Modifier
 ) {
     val bg = if (isPrimary)
-        Brush.linearGradient(listOf(AccentTeal, PrimaryGreen))
+        Brush.linearGradient(listOf(LightMint, PaleGreen))
     else
         Brush.linearGradient(listOf(White, PaleGreen))
-    val textColor = if (isPrimary) White else DarkGreen
+    val textColor = if (isPrimary) DarkText else DarkGreen
 
     Box(
         modifier = modifier
@@ -171,12 +171,12 @@ fun BmiCategoryBadge(category: String) {
     }
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = color
+        color = color.copy(alpha = 0.18f)
     ) {
         Text(
             text = category,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            color = White,
+            color = DarkText,
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp
         )
@@ -265,17 +265,19 @@ fun PrimaryButton(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    val contentColor = if (enabled && !isLoading) White else DarkGreen
+    val contentColor = DarkText
 
     Button(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().heightIn(min = 50.dp),
         shape = RoundedCornerShape(ButtonRadius),
         colors = ButtonDefaults.buttonColors(
-            containerColor = PrimaryGreen,
-            disabledContainerColor = LightMint,
-            disabledContentColor = DarkGreen
+            containerColor = LightMint,
+            contentColor = DarkText,
+            disabledContainerColor = LightGray,
+            disabledContentColor = DarkText
         ),
+        border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.45f)),
         enabled = enabled && !isLoading
     ) {
         if (isLoading) {
@@ -358,14 +360,14 @@ fun DashboardCard(
 fun NutrientBadge(text: String, isPrimary: Boolean = false) {
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = if (isPrimary) PrimaryGreen else PaleGreen
+        color = if (isPrimary) LightMint else PaleGreen
     ) {
         Text(
             text,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
-            color = if (isPrimary) White else DarkGreen
+            color = if (isPrimary) DarkText else DarkGreen
         )
     }
 }

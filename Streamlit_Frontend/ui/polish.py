@@ -11,10 +11,12 @@ def inject_ui_polish() -> None:
                 --targ-bg: #F6F8F4;
                 --targ-surface: #FFFFFF;
                 --targ-border: #D8E3D6;
-                --targ-text: #243025;
+                --targ-text: #000000;
                 --targ-muted: #647067;
                 --targ-green: #2F7D48;
                 --targ-green-dark: #1F5F39;
+                --targ-mint: #D9F0DF;
+                --targ-pale: #EFF8F0;
                 --targ-teal: #0F766E;
                 --targ-blue: #2563EB;
                 --targ-amber: #D97706;
@@ -53,12 +55,12 @@ def inject_ui_polish() -> None:
             .auth-header,
             .hero-section,
             .footer-section {
-                background: linear-gradient(135deg, var(--targ-teal) 0%, var(--targ-green) 58%, var(--targ-green-dark) 100%) !important;
+                background: linear-gradient(135deg, var(--targ-mint) 0%, var(--targ-pale) 64%, #FFFFFF 100%) !important;
                 border-radius: 10px !important;
                 box-shadow: var(--targ-shadow) !important;
                 padding: 28px 30px !important;
                 margin-bottom: 24px !important;
-                border: 1px solid rgba(255,255,255,0.18);
+                border: 1px solid var(--targ-border) !important;
             }
 
             .hero-section::before,
@@ -71,7 +73,7 @@ def inject_ui_polish() -> None:
             .auth-title {
                 font-size: clamp(2rem, 2.2rem, 2.4rem) !important;
                 line-height: 1.08 !important;
-                color: #FFFFFF !important;
+                color: var(--targ-text) !important;
             }
 
             .hero-subtitle,
@@ -80,7 +82,41 @@ def inject_ui_polish() -> None:
                 max-width: 760px;
                 margin-left: auto !important;
                 margin-right: auto !important;
-                color: rgba(255,255,255,0.88) !important;
+                color: var(--targ-muted) !important;
+            }
+
+            .page-header *,
+            .auth-header *,
+            .hero-section *,
+            .footer-section *,
+            .success-banner *,
+            .workout-card,
+            .workout-card *,
+            .exercise-item,
+            .exercise-item *,
+            .exercise-number,
+            .schedule-day.active,
+            .schedule-day.active *,
+            .summary-card,
+            .summary-card *,
+            .day-header,
+            .day-header *,
+            .grocery-header,
+            .grocery-header *,
+            .calorie-card.active,
+            .calorie-card.active *,
+            .calorie-card.primary,
+            .calorie-card.primary *,
+            .nutrient-badge.calories,
+            .target-badge,
+            .target-badge *,
+            .step-number,
+            .cta-primary,
+            .cta-primary *,
+            .footer-title,
+            .footer-subtitle,
+            .footer-tagline {
+                color: var(--targ-text) !important;
             }
 
             .card,
@@ -165,17 +201,21 @@ def inject_ui_polish() -> None:
             .stButton > button {
                 min-height: 44px;
                 border-radius: var(--targ-radius) !important;
-                background: var(--targ-green) !important;
-                border: 1px solid var(--targ-green-dark) !important;
+                background: var(--targ-mint) !important;
+                border: 1px solid rgba(47, 125, 72, 0.45) !important;
                 box-shadow: 0 1px 2px rgba(20, 33, 24, 0.08) !important;
-                color: #FFFFFF !important;
+                color: var(--targ-text) !important;
                 white-space: normal;
                 transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
             }
 
+            .stButton > button * {
+                color: var(--targ-text) !important;
+            }
+
             .stButton > button:hover {
-                background: var(--targ-green-dark) !important;
-                border-color: var(--targ-green-dark) !important;
+                background: var(--targ-pale) !important;
+                border-color: var(--targ-green) !important;
                 transform: translateY(-1px);
             }
 
@@ -212,8 +252,63 @@ def inject_ui_polish() -> None:
             }
 
             .step-number {
-                background: var(--targ-green) !important;
+                background: var(--targ-mint) !important;
+                color: var(--targ-text) !important;
                 box-shadow: none !important;
+            }
+
+            .success-banner,
+            .workout-card,
+            .summary-card,
+            .day-header,
+            .grocery-header,
+            .calorie-card.active,
+            .calorie-card.primary,
+            .schedule-day.active,
+            .nutrient-badge.calories,
+            .target-badge,
+            .cta-primary {
+                background: var(--targ-mint) !important;
+                border: 1px solid rgba(47, 125, 72, 0.28) !important;
+                box-shadow: 0 1px 2px rgba(20, 33, 24, 0.06) !important;
+            }
+
+            .cta-secondary:hover,
+            .cta-secondary:hover * {
+                background: var(--targ-pale) !important;
+                color: var(--targ-text) !important;
+            }
+
+            .bmi-badge,
+            .bmi-badge *,
+            .bmi-normal,
+            .bmi-underweight,
+            .bmi-overweight,
+            .bmi-obese {
+                color: var(--targ-text) !important;
+            }
+
+            .bmi-normal {
+                background: #D9F0DF !important;
+            }
+
+            .bmi-underweight {
+                background: #FFF3D6 !important;
+            }
+
+            .bmi-overweight {
+                background: #FFE2D8 !important;
+            }
+
+            .bmi-obese {
+                background: #FDE2E7 !important;
+            }
+
+            .exercise-number,
+            .day-calories,
+            .stat-item {
+                background: rgba(255,255,255,0.72) !important;
+                border: 1px solid rgba(47, 125, 72, 0.18) !important;
             }
 
             @media (max-width: 768px) {

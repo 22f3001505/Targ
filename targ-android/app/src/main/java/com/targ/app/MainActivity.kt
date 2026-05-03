@@ -65,9 +65,12 @@ fun TargApp() {
                     Spacer(Modifier.height(24.dp))
                     Button(
                         onClick = { appError = null },
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LightMint,
+                            contentColor = DarkText
+                        )
                     ) {
-                        Text("Retry", color = White)
+                        Text("Retry", color = DarkText)
                     }
                 }
             }
