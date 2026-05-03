@@ -10,7 +10,7 @@ from pathlib import Path
 from api import APIClient, BASE_URL
 from ui.safe import escape_html
 from ui.polish import inject_ui_polish
-from ui.ux import handle_auth_expired, render_flow_status, require_login
+from ui.ux import add_workout_to_session, handle_auth_expired, render_flow_status, require_login, sync_workout_history_from_api
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -573,8 +573,10 @@ with results_col:
                     )
                     handle_auth_expired(result)
                     if result["success"]:
+                        add_workout_to_session(workout["focus"], workout["exercises"], wo_duration, wo_calories, wo_notes)
                         st.success("✅ Workout logged successfully!")
                         st.balloons()
+                        st.rerun()
                     else:
                         st.error(result.get("error", "Failed to log workout"))
             
@@ -583,11 +585,14 @@ with results_col:
             # ─── WORKOUT HISTORY ───
             history = APIClient.get_workout_history(auth_token, limit=5)
             handle_auth_expired(history)
-            if history["success"] and history["data"]:
+            if history["success"]:
+                sync_workout_history_from_api(history.get("data"))
+            recent_workouts = st.session_state.get("workout_history", [])
+            if recent_workouts:
                 st.markdown('<div class="card">', unsafe_allow_html=True)
                 st.markdown('<div class="card-title">📋 Recent Workouts</div>', unsafe_allow_html=True)
                 
-                for log in history["data"]:
+                for log in recent_workouts[:5]:
                     log_date = escape_html(log.get("logged_at", "")[:10], 20)
                     log_focus = escape_html(log.get('workout_focus', ''), 100)
                     st.markdown(f"""

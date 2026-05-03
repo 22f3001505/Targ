@@ -18,6 +18,7 @@ from ui.ux import (
     render_flow_status,
     sync_tracked_meals_from_api,
     sync_water_from_api,
+    sync_workout_history_from_api,
 )
 
 # ═══════════════════════════════════════════════════════════════
@@ -129,6 +130,7 @@ if st.session_state.auth_token:
 
 account_water_result = None
 account_tracked_result = None
+account_workouts_result = None
 if st.session_state.auth_token:
     account_water_result = APIClient.get_water(st.session_state.auth_token)
     handle_auth_expired(account_water_result)
@@ -139,6 +141,11 @@ if st.session_state.auth_token:
     handle_auth_expired(account_tracked_result)
     if account_tracked_result.get("success"):
         sync_tracked_meals_from_api(account_tracked_result.get("data"))
+
+    account_workouts_result = APIClient.get_workout_history(st.session_state.auth_token, limit=5)
+    handle_auth_expired(account_workouts_result)
+    if account_workouts_result.get("success"):
+        sync_workout_history_from_api(account_workouts_result.get("data"))
 
 # ═══════════════════════════════════════════════════════════════
 # SIDEBAR
@@ -360,10 +367,11 @@ if st.session_state.auth_token:
     st.markdown("---")
     st.markdown("### 🏋️ Recent Workouts")
     
-    workouts = APIClient.get_workout_history(st.session_state.auth_token, limit=5)
+    workouts = account_workouts_result or APIClient.get_workout_history(st.session_state.auth_token, limit=5)
     handle_auth_expired(workouts)
-    if workouts["success"] and workouts["data"]:
-        for log in workouts["data"]:
+    recent_workouts = st.session_state.get("workout_history") if workouts.get("success") else None
+    if recent_workouts:
+        for log in recent_workouts[:5]:
             log_focus = escape_html(log.get('workout_focus', ''), 80)
             log_date = escape_html(str(log.get('logged_at', ''))[:10])
             st.markdown(f"""

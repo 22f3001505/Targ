@@ -34,7 +34,7 @@ NEXT_STEP = {
     "Hello.py": "pages/1_💪_Diet_Recommendation.py",
     "pages/0_🔐_Account.py": "pages/1_💪_Diet_Recommendation.py",
     "pages/1_💪_Diet_Recommendation.py": "pages/2_🔍_Custom_Food_Recommendation.py",
-    "pages/2_🔍_Custom_Food_Recommendation.py": "pages/4_📊_Macro_Tracker.py",
+    "pages/2_🔍_Custom_Food_Recommendation.py": "pages/3_🏋️_Workout_Recommendation.py",
     "pages/3_🏋️_Workout_Recommendation.py": "pages/4_📊_Macro_Tracker.py",
     "pages/4_📊_Macro_Tracker.py": "pages/5_📅_Meal_Planner.py",
     "pages/5_📅_Meal_Planner.py": "pages/0_🔐_Account.py",
@@ -47,6 +47,7 @@ USER_SESSION_KEYS = (
     "health_data",
     "diet_recommendations",
     "workout_data",
+    "workout_history",
     "meals_logged",
     "totals",
     "daily_goals",
@@ -55,6 +56,7 @@ USER_SESSION_KEYS = (
     "water_glasses",
     "confirm_clear_meals",
     "meal_plan_autoloaded",
+    "meal_plan_loaded_at",
     "auth_session_checked",
     "auth_redirect_target",
     "auth_redirect_message",
@@ -158,6 +160,50 @@ def sync_tracked_meals_from_api(meals: list | None) -> None:
     recalculate_meal_totals()
 
 
+def sync_workout_history_from_api(workouts: list | None) -> None:
+    """Hydrate recent workouts from cloud data while preserving local optimistic entries."""
+    if not isinstance(workouts, list):
+        return
+    local_workouts = [item for item in st.session_state.get("workout_history", []) if isinstance(item, dict)]
+    local_unsynced = [item for item in local_workouts if item.get("_local")]
+
+    seen_keys = set()
+    synced_workouts = []
+    for item in workouts:
+        if not isinstance(item, dict):
+            continue
+        key = (
+            item.get("id"),
+            item.get("logged_at"),
+            item.get("workout_focus"),
+            item.get("duration_minutes"),
+        )
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        synced_workouts.append(item)
+
+    st.session_state.workout_history = synced_workouts + local_unsynced
+
+
+def add_workout_to_session(workout_focus: str, exercises: list, duration: int, calories_burned: int, notes: str = "") -> dict:
+    """Optimistically update recent workout history after a successful log."""
+    history = st.session_state.get("workout_history")
+    if not isinstance(history, list):
+        history = []
+    history.insert(0, {
+        "_local": True,
+        "workout_focus": workout_focus,
+        "exercises_completed": exercises,
+        "duration_minutes": duration,
+        "calories_burned": calories_burned,
+        "notes": notes,
+        "logged_at": datetime.now().isoformat(timespec="seconds"),
+    })
+    st.session_state.workout_history = history[:10]
+    return st.session_state.workout_history[0]
+
+
 def add_tracked_meal_to_session(
     name: str,
     calories: float,
@@ -227,6 +273,7 @@ def _session_flow_state() -> dict:
 
     has_health = bool(st.session_state.get("health_data"))
     has_workout_plan = bool(st.session_state.get("workout_data") or has_health)
+    workout_history = st.session_state.get("workout_history") or []
     tracked_meals = len(meals_logged)
     water_glasses = _coerce_int(st.session_state.get("water_glasses"))
     visited_pages = set(st.session_state.get(FLOW_VISITED_KEY, []))
@@ -236,6 +283,7 @@ def _session_flow_state() -> dict:
         "username": user_data.get("username") or "account",
         "has_health": has_health,
         "has_workout_plan": has_workout_plan,
+        "has_workout_activity": bool(workout_history),
         "tracked_meals": tracked_meals,
         "water_glasses": water_glasses,
         "has_macro_activity": tracked_meals > 0 or water_glasses > 0,
@@ -250,6 +298,8 @@ def _step_complete(path: str, state: dict) -> bool:
         return state["has_auth"]
     if path == "pages/1_💪_Diet_Recommendation.py":
         return state["has_health"]
+    if path == "pages/3_🏋️_Workout_Recommendation.py":
+        return state["has_workout_activity"]
     if path == "pages/4_📊_Macro_Tracker.py":
         return state["has_macro_activity"]
     if path == "pages/5_📅_Meal_Planner.py":
@@ -262,6 +312,7 @@ def _core_flow_checks(state: dict) -> tuple[tuple[str, bool], ...]:
     return (
         ("Account", state["has_auth"]),
         ("Health", state["has_health"]),
+        ("Workout", state["has_workout_activity"]),
         ("Daily log", state["has_macro_activity"]),
         ("Weekly plan", state["has_plan"]),
     )
@@ -303,6 +354,12 @@ def _recommended_step(active_page: str, state: dict) -> tuple[str | None, str]:
         return "pages/1_💪_Diet_Recommendation.py", "Run health analysis first so every later page uses the right targets."
     if active_page == "pages/1_💪_Diet_Recommendation.py":
         return "pages/2_🔍_Custom_Food_Recommendation.py", "Use your calorie target to find recipes that fit."
+    if active_page == "pages/2_🔍_Custom_Food_Recommendation.py" and not state["has_workout_activity"]:
+        return "pages/3_🏋️_Workout_Recommendation.py", "Log one workout so fitness progress joins your nutrition flow."
+    if active_page == "pages/3_🏋️_Workout_Recommendation.py" and not state["has_workout_activity"]:
+        return "pages/3_🏋️_Workout_Recommendation.py", "Log today's workout to complete the fitness step."
+    if not state["has_workout_activity"]:
+        return "pages/3_🏋️_Workout_Recommendation.py", "Log one workout so the complete health flow is covered."
     if not state["has_macro_activity"]:
         return "pages/4_📊_Macro_Tracker.py", "Log a meal or water so today's dashboard has real progress."
     if not state["has_plan"]:
@@ -397,6 +454,7 @@ def render_flow_status(active_page: str) -> None:
                 <span>☁️ Sync: {sync_label}</span>
                 <span>💪 Health: {'ready' if state['has_health'] else 'needed'}</span>
                 <span>🍽️ Meals: {state['tracked_meals']}</span>
+                <span>🏋️ Workouts: {'logged' if state['has_workout_activity'] else 'open'}</span>
                 <span>💧 Water: {state['water_glasses']}</span>
                 <span>📅 Plan: {'ready' if state['has_plan'] else 'open'}</span>
             </div>

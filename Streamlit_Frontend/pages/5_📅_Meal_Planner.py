@@ -593,6 +593,8 @@ if auth_token:
             result = APIClient.save_meal_plan(plan_data, auth_token)
             handle_auth_expired(result)
             if result["success"]:
+                st.session_state.meal_plan_loaded_at = "saved"
+                st.session_state.meal_plan_autoloaded = True
                 st.success("✅ Meal plan saved! It will be restored next time you visit.")
             else:
                 st.error(result.get("error", "Failed to save plan"))
@@ -608,6 +610,8 @@ if auth_token:
                         for slot, _, _ in MEAL_SLOTS:
                             if plan[day].get(slot) is not None:
                                 st.session_state[f"{day}_{slot}"] = resolve_meal_name(slot, plan[day][slot])
+                st.session_state.meal_plan_loaded_at = result["data"].get("created_at") or "loaded"
+                st.session_state.meal_plan_autoloaded = True
                 st.success("✅ Plan loaded!")
                 st.rerun()
             else:
