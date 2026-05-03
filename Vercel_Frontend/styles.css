@@ -253,7 +253,22 @@ h3 {
 .badges {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+}
+
+.flow-next-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: var(--brand);
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .view {
@@ -416,6 +431,15 @@ h3 {
 
 .primary-button:hover {
   background: var(--brand-strong);
+}
+
+.primary-button:disabled,
+.secondary-button:disabled,
+.danger-button:disabled,
+.ghost-button:disabled,
+.flow-next-button:disabled {
+  cursor: progress;
+  opacity: 0.68;
 }
 
 .metrics {

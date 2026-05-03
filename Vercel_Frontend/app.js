@@ -40,6 +40,7 @@ const defaultState = {
   recipes: [],
   recipeTitle: "",
   meals: [],
+  savedMeals: [],
   water: 0,
   workouts: [],
   plan: {},
@@ -48,6 +49,7 @@ const defaultState = {
 
 let route = location.hash.replace("#", "") || "account";
 let state = loadState();
+let pendingRoute = route !== "account" && views.some(([id]) => id === route) ? route : "health";
 
 const navEl = document.querySelector("#nav");
 const viewEl = document.querySelector("#view");
@@ -70,14 +72,31 @@ function init() {
 
 function loadState() {
   try {
-    return { ...defaultState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") };
+    return normalizeState({ ...defaultState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") });
   } catch {
-    return { ...defaultState };
+    return normalizeState({ ...defaultState });
   }
 }
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function normalizeState(nextState) {
+  return {
+    ...defaultState,
+    ...nextState,
+    token: typeof nextState.token === "string" ? nextState.token : "",
+    user: nextState.user && typeof nextState.user === "object" ? nextState.user : null,
+    health: nextState.health && typeof nextState.health === "object" ? nextState.health : null,
+    recipes: Array.isArray(nextState.recipes) ? nextState.recipes : [],
+    meals: Array.isArray(nextState.meals) ? nextState.meals : [],
+    savedMeals: Array.isArray(nextState.savedMeals) ? nextState.savedMeals : [],
+    workouts: Array.isArray(nextState.workouts) ? nextState.workouts : [],
+    plan: nextState.plan && typeof nextState.plan === "object" ? nextState.plan : {},
+    goals: nextState.goals && typeof nextState.goals === "object" ? nextState.goals : null,
+    water: number(nextState.water),
+  };
 }
 
 function isSignedIn() {
@@ -114,6 +133,7 @@ function renderNav() {
 function render() {
   if (!views.some(([id]) => id === route)) route = "account";
   if (!isSignedIn() && route !== "account") {
+    pendingRoute = route;
     route = "account";
     history.replaceState(null, "", "#account");
   }
@@ -157,7 +177,10 @@ function renderFlow() {
     `Water: ${state.water}`,
     `Workouts: ${state.workouts.length}`,
     `Plan: ${planCount()}`,
-  ].map((item) => `<span class="badge">${escapeHtml(item)}</span>`).join("");
+  ].map((item) => `<span class="badge">${escapeHtml(item)}</span>`).join("") + renderFlowAction();
+  document.querySelector("[data-flow-next]")?.addEventListener("click", (event) => {
+    navigateTo(event.currentTarget.dataset.flowNext);
+  });
 }
 
 function nextHint(complete) {
@@ -167,6 +190,34 @@ function nextHint(complete) {
   if (!complete[3]) return "Track a meal or water to build today's dashboard.";
   if (!complete[4]) return "Create a weekly meal plan.";
   return "Core flow is complete. Keep tracking today.";
+}
+
+function renderFlowAction() {
+  const next = recommendedRoute();
+  if (!next || next === route) return "";
+  return `<button class="flow-next-button" data-flow-next="${next}">Continue to ${escapeHtml(labelFor(next))}</button>`;
+}
+
+function recommendedRoute() {
+  if (!state.health) return "health";
+  if (!state.workouts.length) return "workouts";
+  if (!state.meals.length && !state.water) return "macros";
+  if (!planCount()) return "planner";
+  return "account";
+}
+
+function labelFor(id) {
+  return views.find(([viewId]) => viewId === id)?.[1] || "App";
+}
+
+function navigateTo(id) {
+  if (!views.some(([viewId]) => viewId === id)) return;
+  route = id;
+  if (location.hash !== `#${id}`) {
+    location.hash = id;
+  } else {
+    render();
+  }
 }
 
 async function checkApi() {
@@ -230,6 +281,7 @@ function renderAuthGate() {
         <p class="eyebrow">Secure entry</p>
         <h2>Login or create an account to enter TARG</h2>
         <p class="muted">The health dashboard, recipe search, macro tracker, workouts, and planner stay locked until your account is active.</p>
+        <p class="muted">After authentication, you will continue to ${escapeHtml(labelFor(pendingRoute))}.</p>
       </div>
       <div class="gate-badges">
         <span class="badge">Account sync</span>
@@ -266,13 +318,15 @@ function renderAuthGate() {
 async function login(form) {
   const username = value("loginUser");
   const password = value("loginPass");
+  if (!username || !password) throw new Error("Enter your username/email and password.");
   const data = await api("/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });
   state.token = data.access_token;
   state.user = data.user;
   saveState();
   await hydrateAccount(false, false);
-  route = "health";
-  history.replaceState(null, "", "#health");
+  route = pendingRoute || "health";
+  pendingRoute = "health";
+  history.replaceState(null, "", `#${route}`);
   render();
   setNotice("Signed in successfully. Welcome to TARG.", "success");
 }
@@ -284,13 +338,20 @@ async function signup() {
     username: value("signupUser"),
     password: value("signupPass"),
   };
+  if (!payload.email || !payload.username || !payload.password) {
+    throw new Error("Email, username, and password are required.");
+  }
+  if (payload.password.length < 8 || !/[A-Za-z]/.test(payload.password) || !/\d/.test(payload.password)) {
+    throw new Error("Password must be at least 8 characters and include a letter and a number.");
+  }
   const data = await api("/auth/signup", { method: "POST", body: JSON.stringify(payload) });
   state.token = data.access_token;
   state.user = data.user;
   saveState();
   await hydrateAccount(false, false);
-  route = "health";
-  history.replaceState(null, "", "#health");
+  route = pendingRoute || "health";
+  pendingRoute = "health";
+  history.replaceState(null, "", `#${route}`);
   render();
   setNotice("Account created. Welcome to TARG.", "success");
 }
@@ -298,6 +359,7 @@ async function signup() {
 function logout(showNotice) {
   state = { ...defaultState };
   saveState();
+  pendingRoute = "health";
   route = "account";
   history.replaceState(null, "", "#account");
   render();
@@ -314,6 +376,7 @@ async function hydrateAccount(showNotice, renderAfter = true) {
       api("/user/workouts?limit=20"),
       api("/user/meal-plan"),
     ]);
+    if (!isSignedIn()) return;
     if (profile.status === "fulfilled") state.user = profile.value;
     if (meals.status === "fulfilled") {
       state.meals = meals.value
@@ -381,6 +444,7 @@ async function analyzeHealth() {
   };
   saveState();
   render();
+  setNotice("Health analysis complete. Recipes and workouts are ready.", "success");
 }
 
 function renderHealthSummary(h) {
@@ -498,19 +562,20 @@ function renderRecipeCards(recipes) {
 
 function bindRecipeButtons() {
   document.querySelectorAll("[data-save-recipe]").forEach((button) => {
-    button.addEventListener("click", () => saveRecipe(number(button.dataset.saveRecipe)));
+    button.addEventListener("click", () => runBusy(button, () => saveRecipe(number(button.dataset.saveRecipe))));
   });
   document.querySelectorAll("[data-track-recipe]").forEach((button) => {
-    button.addEventListener("click", () => {
-      addMeal(recipeToMeal(state.recipes[number(button.dataset.trackRecipe)]));
-    });
+    button.addEventListener("click", () => runBusy(button, () => addMeal(recipeToMeal(state.recipes[number(button.dataset.trackRecipe)]))));
   });
 }
 
 async function saveRecipe(index) {
   if (!state.token) throw new Error("Sign in first to save recipes.");
   const meal = recipeToMeal(state.recipes[index]);
-  await api("/user/meals", { method: "POST", body: JSON.stringify({ ...meal, meal_name: meal.name, meal_type: "saved" }) });
+  const saved = await api("/user/meals", { method: "POST", body: JSON.stringify({ ...meal, meal_name: meal.name, meal_type: "saved" }) });
+  state.savedMeals = [{ id: saved.meal_id, meal_name: meal.name, ...meal }, ...(state.savedMeals || [])].slice(0, 100);
+  saveState();
+  renderFlow();
   setNotice("Recipe saved to account.", "success");
 }
 
@@ -791,12 +856,17 @@ function randomizePlan() {
   state.plan = next;
   saveState();
   render();
+  setNotice("Weekly plan filled. Edit any slot, then save it to your account.", "success");
 }
 
 async function savePlan() {
   if (!state.token) throw new Error("Sign in first to save a plan.");
-  const payload = { plan_data: normalizedPlan(), week_start: new Date().toISOString().slice(0, 10) };
+  state.plan = normalizedPlan();
+  if (!planCount()) throw new Error("Add or randomize at least one meal before saving the plan.");
+  const payload = { plan_data: state.plan, week_start: new Date().toISOString().slice(0, 10) };
   await api("/user/meal-plan", { method: "POST", body: JSON.stringify(payload) });
+  saveState();
+  renderFlow();
   setNotice("Meal plan saved.", "success");
 }
 
@@ -822,25 +892,35 @@ function groceryList(plan) {
 function bindSubmit(id, handler) {
   document.getElementById(id)?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    setNotice("");
-    try {
-      await handler(new FormData(event.currentTarget));
-    } catch (error) {
-      setNotice(error.message || "Action failed.", "error");
-    }
+    const submitter = event.submitter || event.currentTarget.querySelector("[type='submit']");
+    await runBusy(submitter, () => handler(new FormData(event.currentTarget)));
   });
 }
 
 function on(selector, handler) {
   document.querySelector(selector)?.addEventListener("click", async (event) => {
     event.preventDefault();
-    setNotice("");
-    try {
-      await handler(event);
-    } catch (error) {
-      setNotice(error.message || "Action failed.", "error");
-    }
+    await runBusy(event.currentTarget, () => handler(event));
   });
+}
+
+async function runBusy(button, handler) {
+  const originalLabel = button?.textContent;
+  setNotice("");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Working...";
+  }
+  try {
+    await handler();
+  } catch (error) {
+    setNotice(error.message || "Action failed.", "error");
+  } finally {
+    if (button?.isConnected) {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+  }
 }
 
 function field(id, label, type = "text", valueText = "", placeholder = "") {
