@@ -308,8 +308,25 @@ if 'daily_goals' not in st.session_state:
             "carbs": round(cal * 0.45 / 4),      # 45% from carbs (4 kcal/g)
             "fat": round(cal * 0.25 / 9)          # 25% from fat (9 kcal/g)
         }
+        st.session_state.daily_goals_source_calories = int(cal)
+        st.session_state.daily_goals_custom = False
     else:
         st.session_state.daily_goals = {"calories": 2000, "protein": 150, "carbs": 250, "fat": 65}
+        st.session_state.daily_goals_source_calories = None
+        st.session_state.daily_goals_custom = False
+
+# Keep the end-to-end flow connected: new health analysis updates macro goals
+# until the user manually customizes them.
+if 'health_data' in st.session_state and st.session_state.health_data and not st.session_state.get("daily_goals_custom"):
+    health_cal = int(st.session_state.health_data.get('daily_calories', {}).get('maintenance', 0) or 0)
+    if health_cal > 0 and st.session_state.get("daily_goals_source_calories") != health_cal:
+        st.session_state.daily_goals = {
+            "calories": health_cal,
+            "protein": round(health_cal * 0.30 / 4),
+            "carbs": round(health_cal * 0.45 / 4),
+            "fat": round(health_cal * 0.25 / 9)
+        }
+        st.session_state.daily_goals_source_calories = health_cal
 
 if 'meals_logged' not in st.session_state:
     st.session_state.meals_logged = []
@@ -417,6 +434,8 @@ with left_col:
         
         if st.form_submit_button("💾 Save Goals", use_container_width=True):
             st.session_state.daily_goals = {"calories": cal_goal, "protein": protein_goal, "carbs": carbs_goal, "fat": fat_goal}
+            st.session_state.daily_goals_custom = True
+            st.session_state.daily_goals_source_calories = None
             st.success("✅ Goals saved!")
     
     st.markdown('</div>', unsafe_allow_html=True)

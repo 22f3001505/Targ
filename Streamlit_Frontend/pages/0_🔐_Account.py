@@ -224,16 +224,19 @@ if st.session_state.auth_token:
     
     # Quick actions
     st.markdown("---")
-    rc1, rc2, rc3 = st.columns(3)
-    with rc1:
-        if st.button("💪 Health Analysis", use_container_width=True, type="primary"):
-            st.switch_page("pages/1_💪_Diet_Recommendation.py")
-    with rc2:
-        if st.button("🔍 Search Recipes", use_container_width=True):
-            st.switch_page("pages/2_🔍_Custom_Food_Recommendation.py")
-    with rc3:
-        if st.button("🏋️ Workouts", use_container_width=True):
-            st.switch_page("pages/3_🏋️_Workout_Recommendation.py")
+    quick_actions = [
+        ("💪 Health Analysis", "pages/1_💪_Diet_Recommendation.py", "primary"),
+        ("🔍 Search Recipes", "pages/2_🔍_Custom_Food_Recommendation.py", "secondary"),
+        ("🏋️ Workouts", "pages/3_🏋️_Workout_Recommendation.py", "secondary"),
+        ("📊 Track Macros", "pages/4_📊_Macro_Tracker.py", "secondary"),
+        ("📅 Meal Planner", "pages/5_📅_Meal_Planner.py", "secondary"),
+    ]
+    for row_start in range(0, len(quick_actions), 3):
+        cols = st.columns(3)
+        for col, (label, target, button_type) in zip(cols, quick_actions[row_start:row_start + 3]):
+            with col:
+                if st.button(label, use_container_width=True, type=button_type):
+                    st.switch_page(target)
     
     # ═══════════════════════════════════════════════════════════════
     # HEALTH HISTORY CHART

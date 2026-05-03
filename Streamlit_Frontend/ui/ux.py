@@ -7,6 +7,7 @@ from api import APIClient
 
 AUTH_PAGE = "pages/0_🔐_Account.py"
 DEFAULT_AFTER_LOGIN = "Hello.py"
+FLOW_VISITED_KEY = "flow_visited_pages"
 
 FLOW_STEPS = (
     ("🏠 Home", "Hello.py"),
@@ -48,21 +49,20 @@ USER_SESSION_KEYS = (
     "meals_logged",
     "totals",
     "daily_goals",
+    "daily_goals_custom",
+    "daily_goals_source_calories",
     "water_glasses",
     "confirm_clear_meals",
     "meal_plan_autoloaded",
     "auth_session_checked",
     "auth_redirect_target",
     "auth_redirect_message",
+    FLOW_VISITED_KEY,
 )
 
 
 def _find_step(path: str) -> tuple[str, str]:
     return next((step for step in FLOW_STEPS if step[1] == path), FLOW_STEPS[0])
-
-
-def _step_index(path: str) -> int:
-    return next((idx for idx, step in enumerate(FLOW_STEPS) if step[1] == path), 0)
 
 
 def _link_to_page(path: str, label: str, *, key: str) -> None:
@@ -71,6 +71,13 @@ def _link_to_page(path: str, label: str, *, key: str) -> None:
         st.page_link(path, label=label)
     elif st.button(label, key=key, use_container_width=True):
         st.switch_page(path)
+
+
+def _mark_page_visited(path: str) -> None:
+    visited = list(st.session_state.get(FLOW_VISITED_KEY, []))
+    if path not in visited:
+        visited.append(path)
+    st.session_state[FLOW_VISITED_KEY] = visited
 
 
 def _coerce_int(value: object, default: int = 0) -> int:
@@ -99,39 +106,71 @@ def _session_flow_state() -> dict:
     planned_meals = sum(1 for key in planner_slots if st.session_state.get(key))
 
     has_health = bool(st.session_state.get("health_data"))
-    has_workout = bool(st.session_state.get("workout_data") or has_health)
+    has_workout_plan = bool(st.session_state.get("workout_data") or has_health)
     tracked_meals = len(meals_logged)
     water_glasses = _coerce_int(st.session_state.get("water_glasses"))
+    visited_pages = set(st.session_state.get(FLOW_VISITED_KEY, []))
 
     return {
         "has_auth": bool(st.session_state.get("auth_token")),
         "username": user_data.get("username") or "account",
         "has_health": has_health,
-        "has_workout": has_workout,
+        "has_workout_plan": has_workout_plan,
         "tracked_meals": tracked_meals,
         "water_glasses": water_glasses,
         "has_macro_activity": tracked_meals > 0 or water_glasses > 0,
         "planned_meals": planned_meals,
         "has_plan": bool(st.session_state.get("meal_plan_loaded_at")) or planned_meals > 0,
+        "visited_pages": visited_pages,
     }
 
 
 def _step_complete(path: str, state: dict) -> bool:
-    if path == "Hello.py":
-        return True
     if path == "pages/0_🔐_Account.py":
         return state["has_auth"]
     if path == "pages/1_💪_Diet_Recommendation.py":
         return state["has_health"]
-    if path == "pages/2_🔍_Custom_Food_Recommendation.py":
-        return state["has_health"]
-    if path == "pages/3_🏋️_Workout_Recommendation.py":
-        return state["has_workout"]
     if path == "pages/4_📊_Macro_Tracker.py":
         return state["has_macro_activity"]
     if path == "pages/5_📅_Meal_Planner.py":
         return state["has_plan"]
     return False
+
+
+def _core_flow_checks(state: dict) -> tuple[tuple[str, bool], ...]:
+    """Milestones that represent actual user progress, not just navigation."""
+    return (
+        ("Account", state["has_auth"]),
+        ("Health", state["has_health"]),
+        ("Daily log", state["has_macro_activity"]),
+        ("Weekly plan", state["has_plan"]),
+    )
+
+
+def _step_status(path: str, state: dict, active_page: str) -> tuple[str, str]:
+    """Return visual class and short status label for a flow step."""
+    if path == active_page:
+        return "active", "Current"
+    if _step_complete(path, state):
+        return "done", "Done"
+    if path in state["visited_pages"]:
+        return "visited", "Visited"
+    if not state["has_auth"] and path != AUTH_PAGE:
+        return "blocked", "Sign in first"
+    if path == "pages/2_🔍_Custom_Food_Recommendation.py" and state["has_health"]:
+        return "ready", "Ready"
+    if path == "pages/3_🏋️_Workout_Recommendation.py" and state["has_workout_plan"]:
+        return "ready", "Ready"
+    if path in ("pages/4_📊_Macro_Tracker.py", "pages/5_📅_Meal_Planner.py") and state["has_health"]:
+        return "ready", "Ready"
+    if path in (
+        "pages/2_🔍_Custom_Food_Recommendation.py",
+        "pages/3_🏋️_Workout_Recommendation.py",
+        "pages/4_📊_Macro_Tracker.py",
+        "pages/5_📅_Meal_Planner.py",
+    ):
+        return "blocked", "Health first"
+    return "ready", "Ready"
 
 
 def _recommended_step(active_page: str, state: dict) -> tuple[str | None, str]:
@@ -201,14 +240,17 @@ def render_auth_redirect_notice() -> None:
 
 def render_flow_status(active_page: str) -> None:
     """Render a clear end-to-end workflow strip shared by every page."""
+    _mark_page_visited(active_page)
     state = _session_flow_state()
     current_label, _ = _find_step(active_page)
-    active_idx = _step_index(active_page)
-    completed_steps = sum(1 for _, path in FLOW_STEPS[1:] if _step_complete(path, state))
-    progress_pct = round(completed_steps / max(len(FLOW_STEPS) - 1, 1) * 100)
+    checks = _core_flow_checks(state)
+    completed_steps = sum(1 for _, complete in checks if complete)
+    progress_pct = round(completed_steps / max(len(checks), 1) * 100)
     sync_label = escape(f"@{state['username']}" if state["has_auth"] else "offline")
     next_path, next_reason = _recommended_step(active_page, state)
-    next_label = _find_step(next_path)[0] if next_path else current_label
+    next_label = _find_step(next_path)[0] if next_path else (
+        "Sign in / Sign up" if not state["has_auth"] and active_page == AUTH_PAGE else current_label
+    )
     safe_current = escape(current_label)
     safe_next_label = escape(next_label)
     safe_reason = escape(next_reason)
@@ -225,7 +267,7 @@ def render_flow_status(active_page: str) -> None:
                 </div>
                 <div class="flow-score">
                     <strong>{progress_pct}%</strong>
-                    <span>ready</span>
+                    <span>{completed_steps}/{len(checks)} done</span>
                 </div>
             </div>
             <div class="flow-progress" aria-label="Workflow completion">
@@ -245,13 +287,8 @@ def render_flow_status(active_page: str) -> None:
 
     step_cards = []
     for idx, (label, path) in enumerate(FLOW_STEPS):
-        complete = _step_complete(path, state)
-        classes = ["flow-step-card"]
-        if path == active_page:
-            classes.append("active")
-        elif complete or idx < active_idx:
-            classes.append("done")
-        status = "Current" if path == active_page else ("Ready" if complete else "Next")
+        state_class, status = _step_status(path, state, active_page)
+        classes = ["flow-step-card", state_class]
         step_cards.append(
             f'<div class="{" ".join(classes)}">'
             f"<span>{idx + 1}</span>"
@@ -280,7 +317,8 @@ def render_flow_status(active_page: str) -> None:
         cols = st.columns(len(row))
         for col, (label, path) in zip(cols, row):
             with col:
-                display = f"✓ {label}" if _step_complete(path, state) and path != active_page else label
+                state_class, _ = _step_status(path, state, active_page)
+                display = f"✓ {label}" if state_class == "done" and path != active_page else label
                 if path == active_page:
                     st.markdown(f"<div class=\"flow-current-link\">{escape(display)}</div>", unsafe_allow_html=True)
                 else:

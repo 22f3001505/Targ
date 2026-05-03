@@ -310,6 +310,12 @@ if nutrition_mode:
 if ingredient_mode:
     st.session_state.search_mode = "ingredients"
 
+health_meal_calories = 400
+if 'health_data' in st.session_state and st.session_state.health_data:
+    maintenance = int(st.session_state.health_data.get('daily_calories', {}).get('maintenance', 0) or 0)
+    if maintenance > 0:
+        health_meal_calories = min(1000, max(100, round((maintenance / 3) / 10) * 10))
+
 # ═══════════════════════════════════════════════════════════════
 # NUTRITION SEARCH
 # ═══════════════════════════════════════════════════════════════
@@ -321,7 +327,7 @@ if st.session_state.search_mode == "nutrition":
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            calories = st.slider("🔥 Calories", 100, 1000, 400, 10)
+            calories = st.slider("🔥 Calories", 100, 1000, health_meal_calories, 10)
             fat = st.slider("🥑 Fat (g)", 0, 50, 15, 1)
             saturated = st.slider("🧈 Saturated Fat (g)", 0, 20, 5, 1)
         
@@ -414,7 +420,8 @@ else:
     
     col1, col2 = st.columns(2)
     with col1:
-        max_calories = st.slider("Max Calories", 200, 1000, 600, 50)
+        ingredient_calorie_default = min(1000, max(200, round((health_meal_calories + 150) / 50) * 50))
+        max_calories = st.slider("Max Calories", 200, 1000, ingredient_calorie_default, 50)
     with col2:
         num_results = st.slider("Results to show", 3, 10, 5)
     

@@ -269,6 +269,34 @@ def inject_ui_polish() -> None:
                 background: var(--targ-mint);
             }
 
+            .flow-step-card.ready {
+                background: #F8FBFF;
+                border-color: rgba(37, 99, 235, 0.22);
+            }
+
+            .flow-step-card.ready span {
+                background: #DBEAFE;
+            }
+
+            .flow-step-card.visited {
+                background: #FFFFFF;
+                border-color: rgba(217, 119, 6, 0.28);
+                border-style: dashed;
+            }
+
+            .flow-step-card.visited span {
+                background: #FFF3D6;
+            }
+
+            .flow-step-card.blocked {
+                background: #F4F6F4;
+                border-color: #DFE5DF;
+            }
+
+            .flow-step-card.blocked span {
+                background: #E6EEE5;
+            }
+
             .flow-step-card.active {
                 background: #FFFFFF;
                 border: 2px solid var(--targ-green);
