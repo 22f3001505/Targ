@@ -123,15 +123,81 @@ def inject_ui_polish() -> None:
                 background: var(--targ-surface);
                 border: 1px solid var(--targ-border);
                 border-radius: var(--targ-radius);
-                box-shadow: 0 1px 2px rgba(20, 33, 24, 0.05);
-                padding: 14px 16px;
-                margin: 12px 0 10px 0;
+                box-shadow: var(--targ-shadow);
+                padding: 16px;
+                margin: 12px 0 12px 0;
+            }
+
+            .flow-panel *,
+            .flow-step-grid *,
+            .flow-next-card *,
+            .flow-current-link {
+                color: var(--targ-text) !important;
+            }
+
+            .flow-topline {
+                display: flex;
+                justify-content: space-between;
+                gap: 16px;
+                align-items: flex-start;
+            }
+
+            .flow-eyebrow {
+                color: var(--targ-green-dark) !important;
+                font-size: 0.72rem;
+                font-weight: 800;
+                text-transform: uppercase;
             }
 
             .flow-heading {
                 color: var(--targ-text) !important;
-                font-size: 0.95rem;
-                margin-bottom: 10px;
+                font-size: 1.02rem;
+                line-height: 1.25;
+                margin: 3px 0 4px 0;
+            }
+
+            .flow-copy {
+                color: var(--targ-muted) !important;
+                font-size: 0.84rem;
+                line-height: 1.4;
+            }
+
+            .flow-score {
+                min-width: 76px;
+                text-align: center;
+                background: var(--targ-pale);
+                border: 1px solid var(--targ-border);
+                border-radius: var(--targ-radius);
+                padding: 8px 10px;
+            }
+
+            .flow-score strong {
+                display: block;
+                font-size: 1.25rem;
+                line-height: 1;
+            }
+
+            .flow-score span {
+                color: var(--targ-muted) !important;
+                display: block;
+                font-size: 0.72rem;
+                font-weight: 700;
+                margin-top: 3px;
+                text-transform: uppercase;
+            }
+
+            .flow-progress {
+                background: #E6EEE5;
+                border-radius: 999px;
+                height: 8px;
+                margin: 14px 0;
+                overflow: hidden;
+            }
+
+            .flow-progress-fill {
+                background: linear-gradient(90deg, var(--targ-green), var(--targ-teal));
+                height: 100%;
+                min-width: 8px;
             }
 
             .flow-badges {
@@ -146,7 +212,123 @@ def inject_ui_polish() -> None:
                 border-radius: 8px;
                 color: var(--targ-text) !important;
                 font-size: 0.8rem;
-                padding: 4px 8px;
+                font-weight: 650;
+                padding: 5px 9px;
+            }
+
+            .flow-step-grid {
+                display: grid;
+                grid-template-columns: repeat(7, minmax(0, 1fr));
+                gap: 8px;
+                margin: 10px 0;
+            }
+
+            .flow-step-card {
+                align-items: center;
+                background: var(--targ-surface);
+                border: 1px solid var(--targ-border);
+                border-radius: var(--targ-radius);
+                display: grid;
+                gap: 3px;
+                min-height: 94px;
+                padding: 10px;
+                text-align: left;
+            }
+
+            .flow-step-card span {
+                align-items: center;
+                background: #E6EEE5;
+                border-radius: 999px;
+                display: inline-flex;
+                font-size: 0.72rem;
+                font-weight: 800;
+                height: 24px;
+                justify-content: center;
+                width: 24px;
+            }
+
+            .flow-step-card strong {
+                color: var(--targ-text) !important;
+                font-size: 0.82rem;
+                line-height: 1.2;
+                overflow-wrap: anywhere;
+            }
+
+            .flow-step-card small {
+                color: var(--targ-muted) !important;
+                font-size: 0.72rem;
+                font-weight: 700;
+            }
+
+            .flow-step-card.done {
+                background: var(--targ-pale);
+                border-color: rgba(47, 125, 72, 0.28);
+            }
+
+            .flow-step-card.done span {
+                background: var(--targ-mint);
+            }
+
+            .flow-step-card.active {
+                background: #FFFFFF;
+                border: 2px solid var(--targ-green);
+                box-shadow: 0 6px 18px rgba(47, 125, 72, 0.12);
+            }
+
+            .flow-step-card.active span {
+                background: var(--targ-green);
+                color: var(--targ-text) !important;
+            }
+
+            .flow-next-card {
+                align-items: center;
+                background: #FFFFFF;
+                border: 1px solid var(--targ-border);
+                border-left: 4px solid var(--targ-green);
+                border-radius: var(--targ-radius);
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                margin: 12px 0 8px 0;
+                padding: 12px 14px;
+            }
+
+            .flow-next-title {
+                color: var(--targ-text) !important;
+                font-size: 0.95rem;
+                font-weight: 800;
+                line-height: 1.2;
+            }
+
+            .flow-current-link {
+                align-items: center;
+                background: var(--targ-mint);
+                border: 1px solid rgba(47, 125, 72, 0.45);
+                border-radius: var(--targ-radius);
+                display: flex;
+                font-weight: 800;
+                justify-content: center;
+                min-height: 42px;
+                padding: 9px 10px;
+                text-align: center;
+                width: 100%;
+            }
+
+            div[data-testid="stPageLink"] a {
+                background: var(--targ-surface) !important;
+                border: 1px solid var(--targ-border) !important;
+                border-radius: var(--targ-radius) !important;
+                min-height: 42px !important;
+                justify-content: center !important;
+            }
+
+            div[data-testid="stPageLink"] a,
+            div[data-testid="stPageLink"] a *,
+            div[data-testid="stPageLink"] p {
+                color: var(--targ-text) !important;
+                font-weight: 750 !important;
+                text-align: center !important;
+                white-space: normal !important;
             }
 
             .card,
@@ -365,6 +547,28 @@ def inject_ui_polish() -> None:
                 .results-card,
                 .feature-card {
                     padding: 16px !important;
+                }
+
+                .flow-topline {
+                    flex-direction: column;
+                }
+
+                .flow-score {
+                    text-align: left;
+                    width: 100%;
+                }
+
+                .flow-step-grid {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+
+                .flow-step-card {
+                    min-height: 86px;
+                }
+
+                .flow-next-card {
+                    align-items: flex-start;
+                    flex-direction: column;
                 }
             }
         </style>
