@@ -80,6 +80,10 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function isSignedIn() {
+  return Boolean(state.token);
+}
+
 function setNotice(message, type = "info") {
   if (!message) {
     noticeEl.className = "notice hidden";
@@ -91,11 +95,17 @@ function setNotice(message, type = "info") {
 }
 
 function renderNav() {
+  const signedIn = isSignedIn();
   navEl.innerHTML = views
-    .map(([id, label]) => `<button data-route="${id}">${label}<span>${id === route ? "." : ""}</span></button>`)
+    .map(([id, label]) => {
+      const locked = !signedIn && id !== "account";
+      const display = id === "account" && !signedIn ? "Login / Sign Up" : label;
+      return `<button data-route="${id}" ${locked ? "disabled aria-disabled=\"true\"" : ""}>${display}<span>${locked ? "Locked" : id === route ? "." : ""}</span></button>`;
+    })
     .join("");
   navEl.querySelectorAll("button").forEach((button) => {
     button.addEventListener("click", () => {
+      if (button.disabled) return;
       location.hash = button.dataset.route;
     });
   });
@@ -103,13 +113,18 @@ function renderNav() {
 
 function render() {
   if (!views.some(([id]) => id === route)) route = "account";
+  if (!isSignedIn() && route !== "account") {
+    route = "account";
+    history.replaceState(null, "", "#account");
+  }
+  document.body.classList.toggle("auth-gate", !isSignedIn());
   renderNav();
   navEl.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.route === route));
   const label = views.find(([id]) => id === route)?.[1] || "Account";
-  titleEl.textContent = label;
-  accountChip.textContent = state.user ? `@${state.user.username || "user"}` : "Offline";
-  renderFlow();
-  setNotice("");
+  titleEl.textContent = isSignedIn() ? label : "Login / Sign Up";
+  accountChip.textContent = state.user ? `@${state.user.username || "user"}` : "Authentication required";
+  document.querySelector(".flow-panel").classList.toggle("hidden", !isSignedIn());
+  if (isSignedIn()) renderFlow();
   const renderers = {
     account: renderAccount,
     health: renderHealth,
@@ -182,30 +197,16 @@ async function api(path, options = {}) {
 }
 
 function renderAccount() {
+  if (!isSignedIn()) {
+    renderAuthGate();
+    return;
+  }
+
   const stats = accountStats();
   viewEl.innerHTML = `
-    <div class="grid two">
-      <section class="card">
-        <h2>Sign in</h2>
-        <form id="loginForm" class="grid">
-          ${field("loginUser", "Username or email", "text", "", "username@example.com")}
-          ${field("loginPass", "Password", "password")}
-          <button class="primary-button" type="submit">Sign in</button>
-        </form>
-      </section>
-      <section class="card">
-        <h2>Create account</h2>
-        <form id="signupForm" class="grid">
-          ${field("signupName", "Full name", "text", "", "Your name")}
-          ${field("signupEmail", "Email", "email", "", "you@example.com")}
-          ${field("signupUser", "Username", "text", "", "username")}
-          ${field("signupPass", "Password", "password", "", "At least 8 chars, letter and number")}
-          <button class="primary-button" type="submit">Create account</button>
-        </form>
-      </section>
-    </div>
     <section class="card">
       <h2>Account dashboard</h2>
+      <p class="muted">Your web app is unlocked and syncing with your TARG account.</p>
       <div class="metrics">
         ${metric("Saved meals", stats.savedMeals)}
         ${metric("Tracked meals", state.meals.length)}
@@ -218,10 +219,48 @@ function renderAccount() {
       </div>
     </section>
   `;
-  bindSubmit("loginForm", login);
-  bindSubmit("signupForm", signup);
   on("#refreshAccount", () => hydrateAccount(true));
   on("#logoutButton", () => logout(true));
+}
+
+function renderAuthGate() {
+  viewEl.innerHTML = `
+    <section class="gate-hero">
+      <div>
+        <p class="eyebrow">Secure entry</p>
+        <h2>Login or create an account to enter TARG</h2>
+        <p class="muted">The health dashboard, recipe search, macro tracker, workouts, and planner stay locked until your account is active.</p>
+      </div>
+      <div class="gate-badges">
+        <span class="badge">Account sync</span>
+        <span class="badge">Saved meals</span>
+        <span class="badge">Workout logs</span>
+        <span class="badge">Meal plans</span>
+      </div>
+    </section>
+    <div class="grid two auth-grid">
+      <section class="card">
+        <h2>Sign in</h2>
+        <form id="loginForm" class="grid">
+          ${field("loginUser", "Username or email", "text", "", "username@example.com")}
+          ${field("loginPass", "Password", "password")}
+          <button class="primary-button" type="submit">Enter app</button>
+        </form>
+      </section>
+      <section class="card">
+        <h2>Create account</h2>
+        <form id="signupForm" class="grid">
+          ${field("signupName", "Full name", "text", "", "Your name")}
+          ${field("signupEmail", "Email", "email", "", "you@example.com")}
+          ${field("signupUser", "Username", "text", "", "username")}
+          ${field("signupPass", "Password", "password", "", "At least 8 chars, letter and number")}
+          <button class="primary-button" type="submit">Create and enter</button>
+        </form>
+      </section>
+    </div>
+  `;
+  bindSubmit("loginForm", login);
+  bindSubmit("signupForm", signup);
 }
 
 async function login(form) {
@@ -231,9 +270,11 @@ async function login(form) {
   state.token = data.access_token;
   state.user = data.user;
   saveState();
-  await hydrateAccount(false);
-  setNotice("Signed in successfully.", "success");
+  await hydrateAccount(false, false);
+  route = "health";
+  history.replaceState(null, "", "#health");
   render();
+  setNotice("Signed in successfully. Welcome to TARG.", "success");
 }
 
 async function signup() {
@@ -247,18 +288,23 @@ async function signup() {
   state.token = data.access_token;
   state.user = data.user;
   saveState();
-  setNotice("Account created. You are signed in.", "success");
+  await hydrateAccount(false, false);
+  route = "health";
+  history.replaceState(null, "", "#health");
   render();
+  setNotice("Account created. Welcome to TARG.", "success");
 }
 
 function logout(showNotice) {
   state = { ...defaultState };
   saveState();
-  if (showNotice) setNotice("Logged out.", "success");
+  route = "account";
+  history.replaceState(null, "", "#account");
   render();
+  if (showNotice) setNotice("Logged out.", "success");
 }
 
-async function hydrateAccount(showNotice) {
+async function hydrateAccount(showNotice, renderAfter = true) {
   if (!state.token) return;
   try {
     const [profile, meals, water, workouts, plan] = await Promise.allSettled([
@@ -286,8 +332,8 @@ async function hydrateAccount(showNotice) {
     if (workouts.status === "fulfilled") state.workouts = workouts.value;
     if (plan.status === "fulfilled" && plan.value.plan_data) state.plan = plan.value.plan_data;
     saveState();
+    if (renderAfter) render();
     if (showNotice) setNotice("Account data refreshed.", "success");
-    render();
   } catch (error) {
     if (showNotice) setNotice(error.message, "error");
   }
