@@ -11,7 +11,7 @@ try:
 except ImportError:
     APIClient = None
 from ui.polish import inject_ui_polish
-from ui.ux import require_login
+from ui.ux import render_flow_status, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -451,6 +451,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+render_flow_status("Hello.py")
+
 # Stats row — use real count if API available
 recipe_count = "375K+"
 exercise_count = "198"
@@ -472,23 +474,21 @@ sc4.metric("💯 Free", "100%")
 # ═══════════════════════════════════════════════════════════════
 st.markdown('<div class="section-header"><h2 class="section-title">🚀 Get Started</h2><p class="section-subtitle">Choose your path to better health</p></div>', unsafe_allow_html=True)
 
-col1, col2, col3, col4 = st.columns(4)
+quick_actions = [
+    ("💪 Get Diet Plan", "pages/1_💪_Diet_Recommendation.py", "primary"),
+    ("🔍 Search Foods", "pages/2_🔍_Custom_Food_Recommendation.py", "secondary"),
+    ("🏋️ Workout Plans", "pages/3_🏋️_Workout_Recommendation.py", "secondary"),
+    ("📊 Track Macros", "pages/4_📊_Macro_Tracker.py", "secondary"),
+    ("📅 Plan Meals", "pages/5_📅_Meal_Planner.py", "secondary"),
+    ("🔐 Account", "pages/0_🔐_Account.py", "secondary"),
+]
 
-with col1:
-    if st.button("💪 Get Diet Plan", use_container_width=True, type="primary"):
-        st.switch_page("pages/1_💪_Diet_Recommendation.py")
-
-with col2:
-    if st.button("🔍 Search Foods", use_container_width=True):
-        st.switch_page("pages/2_🔍_Custom_Food_Recommendation.py")
-
-with col3:
-    if st.button("🏋️ Workout Plans", use_container_width=True):
-        st.switch_page("pages/3_🏋️_Workout_Recommendation.py")
-
-with col4:
-    if st.button("📊 Track Macros", use_container_width=True):
-        st.switch_page("pages/4_📊_Macro_Tracker.py")
+for row_start in range(0, len(quick_actions), 3):
+    cols = st.columns(3)
+    for col, (label, target, button_type) in zip(cols, quick_actions[row_start:row_start + 3]):
+        with col:
+            if st.button(label, use_container_width=True, type=button_type):
+                st.switch_page(target)
 
 # ═══════════════════════════════════════════════════════════════
 # WHY TARG SECTION

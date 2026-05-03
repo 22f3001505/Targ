@@ -8,7 +8,7 @@ from pathlib import Path
 from api import APIClient
 from ui.polish import inject_ui_polish
 from ui.safe import escape_html
-from ui.ux import clear_user_session, consume_auth_redirect, ensure_session_fresh, handle_auth_expired, render_auth_redirect_notice
+from ui.ux import clear_user_session, consume_auth_redirect, ensure_session_fresh, handle_auth_expired, render_auth_redirect_notice, render_flow_status
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -144,6 +144,8 @@ st.markdown("""
     <div class="auth-subtitle">Login or create an account to save your health data</div>
 </div>
 """, unsafe_allow_html=True)
+
+render_flow_status("pages/0_🔐_Account.py")
 
 # ═══════════════════════════════════════════════════════════════
 # LOGGED IN VIEW

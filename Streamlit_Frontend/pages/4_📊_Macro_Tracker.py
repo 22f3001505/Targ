@@ -11,7 +11,7 @@ from datetime import datetime
 from api import APIClient, BASE_URL
 from ui.polish import inject_ui_polish
 from ui.safe import escape_html
-from ui.ux import handle_auth_expired, require_login
+from ui.ux import handle_auth_expired, render_flow_status, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -292,6 +292,8 @@ st.markdown("""
     <p class="page-subtitle">Track your daily nutrition with interactive visualizations</p>
 </div>
 """, unsafe_allow_html=True)
+
+render_flow_status("pages/4_📊_Macro_Tracker.py")
 
 # ═══════════════════════════════════════════════════════════════
 # SESSION STATE

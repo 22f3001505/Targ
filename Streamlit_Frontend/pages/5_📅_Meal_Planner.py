@@ -8,7 +8,7 @@ from pathlib import Path
 from api import APIClient, BASE_URL
 from ui.safe import escape_html
 from ui.polish import inject_ui_polish
-from ui.ux import handle_auth_expired, require_login
+from ui.ux import handle_auth_expired, render_flow_status, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -407,6 +407,8 @@ st.markdown("""
     <p class="page-subtitle">Plan your week with balanced, nutritious meals</p>
 </div>
 """, unsafe_allow_html=True)
+
+render_flow_status("pages/5_📅_Meal_Planner.py")
 
 # ═══════════════════════════════════════════════════════════════
 # WEEKLY TABS

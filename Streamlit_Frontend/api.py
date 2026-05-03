@@ -215,9 +215,10 @@ class APIClient:
         if not auth_token:
             return {"success": False, "error": "Not authenticated", "data": []}
         try:
+            request_limit = min(100, max(limit, 100 if meal_type else limit))
             response = requests.get(
                 f"{BASE_URL}/user/meals",
-                params={"limit": limit},
+                params={"limit": request_limit},
                 headers={"Authorization": f"Bearer {auth_token}"},
                 timeout=5
             )
@@ -225,7 +226,7 @@ class APIClient:
                 meals = response.json()
                 if meal_type:
                     meals = [m for m in meals if m.get("meal_type") == meal_type]
-                return {"success": True, "data": meals}
+                return {"success": True, "data": meals[:limit]}
             return _protected_failure(response, "Could not load meals", [])
         except:
             return {"success": False, "data": []}

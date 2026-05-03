@@ -9,7 +9,7 @@ from pathlib import Path
 from api import APIClient, BASE_URL
 from ui.polish import inject_ui_polish
 from ui.safe import escape_html
-from ui.ux import handle_auth_expired, require_login
+from ui.ux import handle_auth_expired, render_flow_status, require_login
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -286,6 +286,8 @@ st.markdown(f"""
     <p class="page-subtitle">AI-powered nutrition matching from {recipe_count_label} recipes</p>
 </div>
 """, unsafe_allow_html=True)
+
+render_flow_status("pages/1_💪_Diet_Recommendation.py")
 
 # ═══════════════════════════════════════════════════════════════
 # SESSION STATE

@@ -119,6 +119,36 @@ def inject_ui_polish() -> None:
                 color: var(--targ-text) !important;
             }
 
+            .flow-panel {
+                background: var(--targ-surface);
+                border: 1px solid var(--targ-border);
+                border-radius: var(--targ-radius);
+                box-shadow: 0 1px 2px rgba(20, 33, 24, 0.05);
+                padding: 14px 16px;
+                margin: 12px 0 10px 0;
+            }
+
+            .flow-heading {
+                color: var(--targ-text) !important;
+                font-size: 0.95rem;
+                margin-bottom: 10px;
+            }
+
+            .flow-badges {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .flow-badges span {
+                background: var(--targ-pale);
+                border: 1px solid var(--targ-border);
+                border-radius: 8px;
+                color: var(--targ-text) !important;
+                font-size: 0.8rem;
+                padding: 4px 8px;
+            }
+
             .card,
             .auth-card,
             .form-card,
