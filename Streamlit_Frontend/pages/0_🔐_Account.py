@@ -8,7 +8,17 @@ from pathlib import Path
 from api import APIClient
 from ui.polish import inject_ui_polish
 from ui.safe import escape_html
-from ui.ux import add_tracked_meal_to_session, clear_user_session, consume_auth_redirect, ensure_session_fresh, handle_auth_expired, render_auth_redirect_notice, render_flow_status
+from ui.ux import (
+    add_tracked_meal_to_session,
+    clear_user_session,
+    consume_auth_redirect,
+    ensure_session_fresh,
+    handle_auth_expired,
+    render_auth_redirect_notice,
+    render_flow_status,
+    sync_tracked_meals_from_api,
+    sync_water_from_api,
+)
 
 # ═══════════════════════════════════════════════════════════════
 # PAGE CONFIGURATION
@@ -117,6 +127,19 @@ if 'user_data' not in st.session_state:
 if st.session_state.auth_token:
     ensure_session_fresh()
 
+account_water_result = None
+account_tracked_result = None
+if st.session_state.auth_token:
+    account_water_result = APIClient.get_water(st.session_state.auth_token)
+    handle_auth_expired(account_water_result)
+    if account_water_result.get("success"):
+        sync_water_from_api(account_water_result.get("data"))
+
+    account_tracked_result = APIClient.get_saved_meals(st.session_state.auth_token, meal_type="tracked", limit=50)
+    handle_auth_expired(account_tracked_result)
+    if account_tracked_result.get("success"):
+        sync_tracked_meals_from_api(account_tracked_result.get("data"))
+
 # ═══════════════════════════════════════════════════════════════
 # SIDEBAR
 # ═══════════════════════════════════════════════════════════════
@@ -193,7 +216,7 @@ if st.session_state.auth_token:
     # Synced daily water and tracked meals, matching the Android account overview.
     st.markdown("---")
     st.markdown("### 💧 Today’s Water")
-    water = APIClient.get_water(st.session_state.auth_token)
+    water = account_water_result or APIClient.get_water(st.session_state.auth_token)
     handle_auth_expired(water)
     if water["success"]:
         wd = water["data"]
@@ -206,10 +229,10 @@ if st.session_state.auth_token:
         st.info("Water tracking will appear here after you log it from Macro Tracker.")
 
     st.markdown("### 🍽️ Recent Tracked Meals")
-    tracked = APIClient.get_saved_meals(st.session_state.auth_token, meal_type="tracked", limit=5)
+    tracked = account_tracked_result or APIClient.get_saved_meals(st.session_state.auth_token, meal_type="tracked", limit=50)
     handle_auth_expired(tracked)
     if tracked["success"] and tracked["data"]:
-        for meal in tracked["data"]:
+        for meal in tracked["data"][:5]:
             m_name = escape_html(meal.get('meal_name', 'Meal'), 80)
             m_date = escape_html(str(meal.get('saved_at') or meal.get('created_at', ''))[:16])
             st.markdown(f"""

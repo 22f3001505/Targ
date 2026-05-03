@@ -99,13 +99,63 @@ def _ensure_meal_log_state() -> None:
 
     totals = st.session_state.get("totals")
     if not isinstance(totals, dict):
-        meals = [meal for meal in st.session_state.meals_logged if isinstance(meal, dict)]
-        st.session_state.totals = {
-            "calories": sum(_coerce_int(meal.get("calories")) for meal in meals),
-            "protein": sum(_coerce_int(meal.get("protein")) for meal in meals),
-            "carbs": sum(_coerce_int(meal.get("carbs")) for meal in meals),
-            "fat": sum(_coerce_int(meal.get("fat")) for meal in meals),
-        }
+        recalculate_meal_totals()
+
+
+def recalculate_meal_totals() -> dict:
+    """Rebuild macro totals from the visible tracked meal session."""
+    meals = [meal for meal in st.session_state.get("meals_logged", []) if isinstance(meal, dict)]
+    totals = {
+        "calories": sum(_coerce_int(meal.get("calories")) for meal in meals),
+        "protein": sum(_coerce_int(meal.get("protein")) for meal in meals),
+        "carbs": sum(_coerce_int(meal.get("carbs")) for meal in meals),
+        "fat": sum(_coerce_int(meal.get("fat")) for meal in meals),
+    }
+    st.session_state.totals = totals
+    return totals
+
+
+def sync_water_from_api(water_data: dict | None) -> None:
+    """Hydrate water state from the account API payload."""
+    if not isinstance(water_data, dict):
+        return
+    st.session_state.water_glasses = _coerce_int(water_data.get("glasses"))
+
+
+def _meal_from_api(meal: dict) -> dict:
+    saved_at = str(meal.get("saved_at") or meal.get("created_at") or "")
+    return {
+        "id": meal.get("id"),
+        "name": meal.get("meal_name", "Meal"),
+        "calories": _coerce_int(meal.get("calories")),
+        "protein": _coerce_int(meal.get("protein")),
+        "carbs": _coerce_int(meal.get("carbs")),
+        "fat": _coerce_int(meal.get("fat")),
+        "time": saved_at[-8:-3] if saved_at else "--:--",
+    }
+
+
+def sync_tracked_meals_from_api(meals: list | None) -> None:
+    """Hydrate tracked meals from cloud data while preserving local unsynced entries."""
+    if not isinstance(meals, list):
+        return
+    local_meals = [meal for meal in st.session_state.get("meals_logged", []) if isinstance(meal, dict)]
+    local_unsynced = [meal for meal in local_meals if not meal.get("id")]
+
+    seen_ids = set()
+    synced_meals = []
+    for meal in meals:
+        if not isinstance(meal, dict):
+            continue
+        meal_id = meal.get("id")
+        if meal_id and meal_id in seen_ids:
+            continue
+        if meal_id:
+            seen_ids.add(meal_id)
+        synced_meals.append(_meal_from_api(meal))
+
+    st.session_state.meals_logged = synced_meals + local_unsynced
+    recalculate_meal_totals()
 
 
 def add_tracked_meal_to_session(
