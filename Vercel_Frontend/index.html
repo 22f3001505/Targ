@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7fbf8" />
+    <title>TARG Health Intelligence</title>
+    <link rel="icon" href="/logo.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary">
+        <div class="brand">
+          <img src="/logo.png" alt="TARG" />
+          <div>
+            <strong>TARG</strong>
+            <span>Health Intelligence</span>
+          </div>
+        </div>
+        <nav class="nav" id="nav"></nav>
+        <div class="sync-card">
+          <span class="label">API</span>
+          <strong id="apiStatus">Checking</strong>
+          <small id="apiMeta">Connecting through Vercel</small>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">End-to-end web flow</p>
+            <h1 id="pageTitle">Account</h1>
+          </div>
+          <div class="account-chip" id="accountChip">Offline</div>
+        </header>
+
+        <section class="flow-panel" aria-label="Workflow progress">
+          <div class="flow-row">
+            <div>
+              <strong id="flowTitle">0/5 milestones complete</strong>
+              <span id="flowHint">Sign in to sync your progress.</span>
+            </div>
+            <span id="flowPercent">0%</span>
+          </div>
+          <div class="progress"><span id="flowFill"></span></div>
+          <div class="badges" id="flowBadges"></div>
+        </section>
+
+        <div id="notice" class="notice hidden"></div>
+        <section id="view" class="view" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <template id="fieldTemplate">
+      <label class="field">
+        <span></span>
+        <input />
+      </label>
+    </template>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
